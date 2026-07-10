@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hlju.learning.mapper.AgentRunMapper">
+    <resultMap id="AgentRunMap" type="com.hlju.learning.domain.po.AgentRunPo">
+        <id property="runId" column="run_id"/>
+        <result property="taskId" column="task_id"/>
+        <result property="objective" column="objective"/>
+        <result property="status" column="status"/>
+        <result property="stepsJson" column="steps_json"/>
+        <result property="toolCallsJson" column="tool_calls_json"/>
+        <result property="finalAnswer" column="final_answer"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="upsertAgentRun">
+        INSERT INTO agent_run (run_id, task_id, objective, status, steps_json, tool_calls_json, final_answer, created_at)
+        VALUES (#{po.runId}, #{po.taskId}, #{po.objective}, #{po.status}, #{po.stepsJson}, #{po.toolCallsJson}, #{po.finalAnswer}, #{po.createdAt})
+        ON DUPLICATE KEY UPDATE
+          task_id = VALUES(task_id),
+          objective = VALUES(objective),
+          status = VALUES(status),
+          steps_json = VALUES(steps_json),
+          tool_calls_json = VALUES(tool_calls_json),
+          final_answer = VALUES(final_answer)
+    </insert>
+
+    <select id="findAgentRun" resultMap="AgentRunMap">
+        SELECT * FROM agent_run WHERE run_id = #{runId}
+    </select>
+
+    <select id="findAllAgentRuns" resultMap="AgentRunMap">
+        SELECT * FROM agent_run ORDER BY created_at DESC
+    </select>
+</mapper>
