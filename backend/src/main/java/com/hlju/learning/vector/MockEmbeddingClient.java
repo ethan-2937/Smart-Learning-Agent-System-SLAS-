@@ -1,12 +1,10 @@
 package com.hlju.learning.vector;
 
 import com.hlju.learning.config.VectorProperties;
-import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
-@Component
 public class MockEmbeddingClient implements EmbeddingClient {
     private final int dimension;
 

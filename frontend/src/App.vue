@@ -11,12 +11,14 @@ import type {
   QuestionRecord,
   QuestionType,
   RetrievalHit,
+  RuntimeStatus,
   SubjectPreset,
 } from './api'
 import {
   approveQuestion,
   generateQuestions,
   getAgentRun,
+  getRuntimeStatus,
   getWorkflowTemplate,
   listAgentRuns,
   listChunks,
@@ -34,6 +36,7 @@ const questions = ref<QuestionRecord[]>([])
 const hits = ref<RetrievalHit[]>([])
 const agentRuns = ref<AgentRunRecord[]>([])
 const workflow = ref<AgentWorkflowTemplate | null>(null)
+const runtimeStatus = ref<RuntimeStatus | null>(null)
 const currentRun = ref<AgentRunRecord | null>(null)
 const currentMaterial = ref<MaterialRecord | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -76,16 +79,18 @@ onMounted(async () => {
 
 async function refreshAll() {
   try {
-    const [materialList, questionList, workflowTemplate, runs] = await Promise.all([
+    const [materialList, questionList, workflowTemplate, runs, status] = await Promise.all([
       listMaterials(),
       listQuestions(),
       getWorkflowTemplate(),
       listAgentRuns(),
+      getRuntimeStatus(),
     ])
     materials.value = materialList
     questions.value = questionList
     workflow.value = workflowTemplate
     agentRuns.value = runs
+    runtimeStatus.value = status
     if (!currentMaterial.value && materialList.length > 0) {
       await selectMaterial(materialList[0])
     }
@@ -229,6 +234,24 @@ function messageOf(error: unknown) {
         <div class="metric-card"><span>{{ indexedCount }}</span><small>已索引</small></div>
         <div class="metric-card"><span>{{ pendingCount }}</span><small>待审核题</small></div>
         <div class="metric-card"><span>{{ approvedCount }}</span><small>已通过</small></div>
+      </div>
+    </section>
+
+    <section class="runtime-strip glass-card">
+      <div>
+        <span>AI Model</span>
+        <strong>{{ runtimeStatus?.aiProvider || 'mock' }} / {{ runtimeStatus?.aiModel || '-' }}</strong>
+        <small>{{ runtimeStatus?.aiApiKeyConfigured ? 'remote key configured' : 'mock or key not configured' }}</small>
+      </div>
+      <div>
+        <span>Embedding</span>
+        <strong>{{ runtimeStatus?.embeddingProvider || 'mock' }} / {{ runtimeStatus?.embeddingModel || '-' }}</strong>
+        <small>{{ runtimeStatus?.embeddingApiKeyConfigured ? 'remote embedding enabled' : 'local mock embedding' }}</small>
+      </div>
+      <div>
+        <span>Vector DB</span>
+        <strong>{{ runtimeStatus?.vectorProvider || 'memory' }} / {{ runtimeStatus?.vectorCollectionName || '-' }}</strong>
+        <small>dimension {{ runtimeStatus?.vectorDimension || 64 }} / topK {{ runtimeStatus?.defaultTopK || 6 }}</small>
       </div>
     </section>
 

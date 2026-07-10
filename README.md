@@ -144,6 +144,7 @@ GET  /api/agents/workflow-template
 GET  /api/agents/runs
 GET  /api/agents/runs/{runId}
 POST /api/practice/submit
+GET  /api/runtime/status
 ```
 
 ## 后续开发重点
@@ -153,3 +154,27 @@ POST /api/practice/submit
 3. 增加课程、课时、学生账号、学习记录、错题本。
 4. 增加教师编辑题目、批量审核、发布到课时。
 5. 增加基于教材来源的题目质量评估指标。
+
+
+## AI / Vector Provider Configuration
+
+The system now supports pluggable AI and vector providers:
+
+1. `AI_PROVIDER=mock`: offline demo mode, no API key required.
+2. `AI_PROVIDER=deepseek`: DeepSeek/OpenAI-compatible chat API for better question stems, answers, and explanations.
+3. `EMBEDDING_PROVIDER=openai-compatible`: OpenAI-compatible `/v1/embeddings` API for stronger semantic retrieval with Qdrant.
+
+Recommended demo configuration:
+
+```env
+AI_PROVIDER=deepseek
+AI_BASE_URL=https://api.deepseek.com
+AI_CHAT_PATH=/chat/completions
+AI_MODEL=deepseek-v4-flash
+AI_THINKING_ENABLED=false
+AI_REASONING_EFFORT=medium
+EMBEDDING_PROVIDER=mock
+APP_VECTOR_DIMENSION=64
+```
+
+If you enable a real embedding model, set `APP_VECTOR_DIMENSION` to the model's real vector size. Otherwise Qdrant will reject vector writes because collection dimensions must match. See `Docker_Deployment.md` for details.

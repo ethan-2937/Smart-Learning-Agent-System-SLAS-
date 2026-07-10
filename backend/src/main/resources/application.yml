@@ -22,12 +22,22 @@ app:
   ai:
     provider: mock
     base-url: ${AI_BASE_URL:}
-    chat-path: ${AI_CHAT_PATH:/v1/chat/completions}
+    chat-path: ${AI_CHAT_PATH:/chat/completions}
     api-key: ${AI_API_KEY:}
-    model: ${AI_MODEL:deepseek-chat}
+    model: ${AI_MODEL:deepseek-v4-flash}
     temperature: 0.2
     timeout-seconds: 120
     max-output-tokens: 1600
+    thinking-enabled: ${AI_THINKING_ENABLED:false}
+    reasoning-effort: ${AI_REASONING_EFFORT:medium}
+  embedding:
+    provider: ${EMBEDDING_PROVIDER:mock}
+    base-url: ${EMBEDDING_BASE_URL:}
+    embedding-path: ${EMBEDDING_PATH:/v1/embeddings}
+    api-key: ${EMBEDDING_API_KEY:}
+    model: ${EMBEDDING_MODEL:}
+    timeout-seconds: 60
+    max-input-chars: 6000
   vector:
     provider: memory
     collection-name: smart_learning_chunks

@@ -127,6 +127,21 @@ export interface AgentRunRecord {
   createdAt: string
 }
 
+export interface RuntimeStatus {
+  aiProvider: string
+  aiModel: string
+  aiApiKeyConfigured: boolean
+  aiBaseUrl: string
+  embeddingProvider: string
+  embeddingModel: string
+  embeddingApiKeyConfigured: boolean
+  vectorProvider: string
+  vectorCollectionName: string
+  qdrantUrl: string
+  vectorDimension: number
+  defaultTopK: number
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options)
   if (!response.ok) {
@@ -207,4 +222,9 @@ export function listAgentRuns() {
 
 export function getAgentRun(runId: string) {
   return request<AgentRunRecord>(`/api/agents/runs/${runId}`)
+}
+
+
+export function getRuntimeStatus() {
+  return request<RuntimeStatus>('/api/runtime/status')
 }

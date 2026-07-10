@@ -41,7 +41,20 @@ services:
       MYSQL_PASSWORD: root
       QDRANT_URL: http://qdrant:6333
       APP_VECTOR_PROVIDER: qdrant
-      AI_PROVIDER: mock
+      APP_VECTOR_DIMENSION: ${APP_VECTOR_DIMENSION:-64}
+      APP_VECTOR_TOP_K: ${APP_VECTOR_TOP_K:-6}
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_CHAT_PATH: ${AI_CHAT_PATH:-/chat/completions}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-deepseek-v4-flash}
+      AI_THINKING_ENABLED: ${AI_THINKING_ENABLED:-false}
+      AI_REASONING_EFFORT: ${AI_REASONING_EFFORT:-medium}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-mock}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
+      EMBEDDING_PATH: ${EMBEDDING_PATH:-/v1/embeddings}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
     ports:
       - "18082:18082"
     volumes:

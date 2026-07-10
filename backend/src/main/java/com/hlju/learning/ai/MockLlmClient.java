@@ -1,8 +1,5 @@
 package com.hlju.learning.ai;
 
-import org.springframework.stereotype.Component;
-
-@Component
 public class MockLlmClient implements LlmClient {
     @Override
     public String complete(String systemPrompt, String userPrompt) {
