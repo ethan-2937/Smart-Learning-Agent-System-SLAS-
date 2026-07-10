@@ -6,6 +6,23 @@ export type QuestionStatus = 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED
 export type AgentRunStatus = 'RUNNING' | 'FINISHED' | 'FAILED'
 export type PracticeSetStatus = 'ACTIVE' | 'FINISHED'
 
+const TOKEN_KEY = 'smart-learning-agent-token'
+
+export interface AuthUser {
+  userId: string
+  username: string
+  realName: string | null
+  roles: string[]
+  lastLoginAt: string | null
+}
+
+export interface AuthResponse {
+  token: string
+  tokenType: string
+  expiresAt: string
+  user: AuthUser
+}
+
 export interface CourseRecord {
   courseId: string
   name: string
@@ -259,8 +276,31 @@ export interface PracticeResult {
   knowledgeNames: string[]
 }
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, options)
+type RequestOptions = RequestInit & { skipAuth?: boolean }
+
+export function getStoredToken() {
+  return localStorage.getItem(TOKEN_KEY) || ''
+}
+
+export function setStoredToken(token: string) {
+  localStorage.setItem(TOKEN_KEY, token)
+}
+
+export function clearStoredToken() {
+  localStorage.removeItem(TOKEN_KEY)
+}
+
+async function request<T>(url: string, options: RequestOptions = {}): Promise<T> {
+  const { skipAuth, ...fetchOptions } = options
+  const headers = new Headers(fetchOptions.headers || {})
+  const token = getStoredToken()
+  if (!skipAuth && token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+  if (fetchOptions.body && !(fetchOptions.body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+  const response = await fetch(url, { ...fetchOptions, headers })
   if (!response.ok) {
     let message = `请求失败：${response.status}`
     try {
@@ -269,9 +309,31 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     } catch {
       // ignore non-json errors
     }
+    if (response.status === 401) {
+      clearStoredToken()
+    }
     throw new Error(message)
   }
+  if (response.status === 204) {
+    return undefined as T
+  }
   return response.json() as Promise<T>
+}
+
+export function loginWithPassword(payload: { username: string; password: string }) {
+  return request<AuthResponse>('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    skipAuth: true,
+  })
+}
+
+export function getCurrentUser() {
+  return request<AuthUser>('/api/auth/me')
+}
+
+export function logout() {
+  return request<{ success: boolean }>('/api/auth/logout', { method: 'POST', skipAuth: true })
 }
 
 
@@ -390,7 +452,11 @@ export function exportQuestions(materialId?: string, status?: QuestionStatus) {
   if (materialId) params.set('materialId', materialId)
   if (status) params.set('status', status)
   const suffix = params.toString() ? `?${params.toString()}` : ''
-  return fetch(`/api/questions/export${suffix}`).then((response) => {
+  const headers = new Headers()
+  const token = getStoredToken()
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+  return fetch(`/api/questions/export${suffix}`, { headers }).then((response) => {
+    if (response.status === 401) clearStoredToken()
     if (!response.ok) throw new Error(`Export failed: ${response.status}`)
     return response.blob()
   })

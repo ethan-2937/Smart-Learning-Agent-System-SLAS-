@@ -5,6 +5,7 @@ import { Cpu, DataAnalysis, Document, MagicStick, Search, UploadFilled } from '@
 import type {
   AgentRunRecord,
   AgentWorkflowTemplate,
+  AuthUser,
   CourseChapterRecord,
   CourseRecord,
   KnowledgePointRecord,
@@ -28,14 +29,17 @@ import type {
 import {
   approveQuestion,
   batchUpdateQuestionStatus,
+  clearStoredToken,
   createChapter,
   createCourse,
   createPracticeSet,
   exportQuestions,
   generateQuestions,
   getAgentRun,
+  getCurrentUser,
   getPracticeSet,
   getRuntimeStatus,
+  getStoredToken,
   getWorkflowTemplate,
   listAgentRuns,
   listChapters,
@@ -48,11 +52,14 @@ import {
   listPracticeSets,
   listQuestions,
   listWrongQuestions,
+  loginWithPassword,
+  logout as logoutApi,
   parseMaterial,
   refreshKnowledgePoints,
   rejectQuestion,
   retrieve,
   submitPractice,
+  setStoredToken,
   updateQuestion,
   uploadMaterial,
 } from './api'
@@ -69,6 +76,12 @@ const workflow = ref<AgentWorkflowTemplate | null>(null)
 const runtimeStatus = ref<RuntimeStatus | null>(null)
 const currentRun = ref<AgentRunRecord | null>(null)
 const currentMaterial = ref<MaterialRecord | null>(null)
+const logoUrl = '/slas-logo.svg'
+const authLoading = ref(true)
+const currentUser = ref<AuthUser | null>(null)
+const loginBusy = ref(false)
+const loginError = ref('')
+const loginForm = ref({ username: 'admin', password: 'admin123' })
 const practiceSets = ref<PracticeSetRecord[]>([])
 const currentPractice = ref<PracticeDetail | null>(null)
 const practiceAnswers = ref<Record<string, string>>({})
@@ -136,10 +149,75 @@ const averageMastery = computed(() => {
   const total = masteryRecords.value.reduce((sum, item) => sum + item.mastery, 0)
   return Math.round((total / masteryRecords.value.length) * 100)
 })
+const userInitial = computed(() => {
+  const name = currentUser.value?.realName || currentUser.value?.username || 'U'
+  return name.slice(0, 2).toUpperCase()
+})
+const roleLabel = computed(() => {
+  const roles = currentUser.value?.roles || []
+  if (roles.includes('ADMIN')) return '系统管理员'
+  if (roles.includes('TEACHER')) return '教师账号'
+  if (roles.includes('STUDENT')) return '学生账号'
+  return '学习者'
+})
 
 onMounted(async () => {
-  await refreshAll()
+  await initAuth()
 })
+
+async function initAuth() {
+  authLoading.value = true
+  loginError.value = ''
+  try {
+    if (getStoredToken()) {
+      currentUser.value = await getCurrentUser()
+      await refreshAll()
+    }
+  } catch {
+    clearStoredToken()
+    currentUser.value = null
+  } finally {
+    authLoading.value = false
+  }
+}
+
+async function login() {
+  if (!loginForm.value.username.trim() || !loginForm.value.password) {
+    loginError.value = '请输入用户名和密码'
+    return
+  }
+  loginBusy.value = true
+  loginError.value = ''
+  try {
+    const result = await loginWithPassword({
+      username: loginForm.value.username.trim(),
+      password: loginForm.value.password,
+    })
+    setStoredToken(result.token)
+    currentUser.value = result.user
+    ElMessage.success('登录成功')
+    await refreshAll()
+  } catch (error) {
+    loginError.value = messageOf(error)
+  } finally {
+    loginBusy.value = false
+  }
+}
+
+async function logout() {
+  try {
+    await logoutApi()
+  } catch {
+    // JWT 是无状态令牌，前端清理本地状态即可完成退出。
+  }
+  clearStoredToken()
+  currentUser.value = null
+  ElMessage.success('已退出登录')
+}
+
+function scrollToSection(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
 async function refreshAll() {
   try {
@@ -590,28 +668,92 @@ function messageOf(error: unknown) {
 </script>
 
 <template>
-  <main class="app-shell">
+  <div v-if="authLoading" class="auth-loading">
+    <span class="auth-loading__orb">SL</span>
+    <strong>正在确认登录状态...</strong>
+  </div>
+
+  <section v-else-if="!currentUser" class="login-shell login-shell--official">
+    <div class="login-orbit login-orbit--one"></div>
+    <div class="login-orbit login-orbit--two"></div>
+    <div class="login-stage">
+      <aside class="login-poster">
+        <div class="login-poster__brand">
+          <span class="brand-mark brand-logo-wrap"><img :src="logoUrl" alt="Smart Learning Agent" /></span>
+          <span>
+            <strong>Smart Learning Agent</strong>
+            <small>通用学习 · RAG · 多智能体</small>
+          </span>
+        </div>
+        <div class="login-poster__copy">
+          <span class="login-eyebrow">LEARNING WORKSPACE</span>
+          <h1>把教材、题库和练习过程连接成学习闭环</h1>
+          <p>登录后可以上传教材、生成习题、审核题库、创建学生练习，并查看错题本与知识掌握度。</p>
+        </div>
+        <div class="login-poster__note">
+          <span>默认演示账号</span>
+          <strong>管理员：admin / admin123；教师：teacher / teacher123；学生：student / student123</strong>
+        </div>
+      </aside>
+
+      <div class="login-card login-card--official">
+        <div class="login-card__head">
+          <span class="login-eyebrow">SECURE SIGN IN</span>
+          <h2>登录智能学习系统</h2>
+          <p>系统使用 JWT 保存登录状态，请在正式部署前修改 `.env` 中的 `APP_AUTH_JWT_SECRET`。</p>
+        </div>
+        <el-alert v-if="loginError" :title="loginError" type="error" show-icon :closable="false" />
+        <div class="login-form">
+          <label>
+            <span>用户名</span>
+            <el-input v-model="loginForm.username" size="large" placeholder="请输入用户名" @keyup.enter="login" />
+          </label>
+          <label>
+            <span>密码</span>
+            <el-input v-model="loginForm.password" size="large" type="password" show-password placeholder="请输入密码" @keyup.enter="login" />
+          </label>
+          <el-button type="primary" size="large" round :loading="loginBusy" @click="login">进入学习工作台</el-button>
+        </div>
+        <div class="login-hint login-hint--official">
+          <strong>说明</strong>
+          <span>当前版本先实现登录鉴权，后续可继续扩展用户管理、角色权限和学生班级绑定。</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main v-else class="app-shell">
     <div class="ambient ambient-one"></div>
     <div class="ambient ambient-two"></div>
 
-    <section class="topbar glass-card">
-      <div class="brand">
-        <div class="brand-mark">SL</div>
-        <div>
-          <div class="brand-title">Smart Learning Agent</div>
-          <div class="brand-subtitle">通用学习 · RAG · 多智能体出题</div>
+    <header class="app-header">
+      <button class="brand" type="button" @click="scrollToSection('courses')">
+        <span class="brand-mark brand-logo-wrap"><img :src="logoUrl" alt="Smart Learning Agent" /></span>
+        <span>
+          <strong>Smart Learning Agent</strong>
+          <small>通用学习 · RAG · 多智能体出题</small>
+        </span>
+      </button>
+      <nav class="decor-nav" aria-label="系统导航">
+        <button type="button" @click="scrollToSection('materials')">教材知识库</button>
+        <button type="button" @click="scrollToSection('rag')">向量检索</button>
+        <button type="button" @click="scrollToSection('questions')">题库审核</button>
+        <button type="button" @click="scrollToSection('learning')">学习练习</button>
+        <button type="button" @click="scrollToSection('agents')">智能体链路</button>
+      </nav>
+      <div class="account-area">
+        <div class="user-chip">
+          <span class="avatar">{{ userInitial }}</span>
+          <span>
+            <strong>{{ currentUser.realName || currentUser.username }}</strong>
+            <small>{{ roleLabel }} · JWT 已登录</small>
+          </span>
         </div>
+        <el-button round @click="logout">退出</el-button>
       </div>
-      <div class="decor-nav">
-        <a href="#materials">教材知识库</a>
-        <a href="#rag">向量检索</a>
-        <a href="#questions">题库审核</a>
-        <a href="#learning">学习练习</a>
-        <a href="#agents">智能体链路</a>
-      </div>
-    </section>
+    </header>
 
-    <section class="hero glass-card">
+    <section class="home-hero">
       <div>
         <p class="eyebrow">Graduation Design Workspace</p>
         <h1>把任意教材变成可追溯、可审核、可练习的智能题库</h1>

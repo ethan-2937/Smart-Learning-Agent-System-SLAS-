@@ -1,6 +1,7 @@
 package com.hlju.learning.exception;
 
 import com.hlju.learning.common.ApiError;
+import com.hlju.learning.security.AuthException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,12 @@ import java.time.Instant;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(AuthException.class)
+    public ResponseEntity<ApiError> handleAuth(AuthException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiError(ex.getMessage(), request.getRequestURI(), Instant.now()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleBadRequest(IllegalArgumentException ex, HttpServletRequest request) {
         return ResponseEntity.badRequest().body(new ApiError(ex.getMessage(), request.getRequestURI(), Instant.now()));

@@ -1,3 +1,22 @@
+CREATE TABLE IF NOT EXISTS app_user (
+  user_id VARCHAR(64) PRIMARY KEY,
+  username VARCHAR(64) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  real_name VARCHAR(128),
+  roles_json TEXT,
+  status INT DEFAULT 1,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  last_login_at DATETIME,
+  INDEX idx_app_user_username (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO app_user (user_id, username, password_hash, real_name, roles_json, status, created_at, updated_at)
+VALUES
+  ('demo-admin', 'admin', 'pbkdf2$120000$c2xhcy1hZG1pbi0yMDI2$8afB8/d+AVte0kFW4n+s6Q4xmT83Pq60QfXyAaOXrXU=', 'System Admin', '["ADMIN","TEACHER"]', 1, NOW(), NOW()),
+  ('demo-teacher', 'teacher', 'pbkdf2$120000$c2xhcy10ZWFjaGVyLTIwMjY=$11uJ/P/Mc18abzvgJdf0DugCcby3bRfRYjrRcBQMJHA=', 'Demo Teacher', '["TEACHER"]', 1, NOW(), NOW()),
+  ('demo-student', 'student', 'pbkdf2$120000$c2xhcy1zdHVkZW50LTIwMjY=$sfUsjgUJCNxyvGkC+6EEhO9LEaE9gGmS8Qy69w69kik=', 'Demo Student', '["STUDENT"]', 1, NOW(), NOW());
+
 CREATE TABLE IF NOT EXISTS material (
   material_id VARCHAR(64) PRIMARY KEY,
   title VARCHAR(255) NOT NULL,

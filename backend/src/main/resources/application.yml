@@ -19,6 +19,10 @@ app:
     provider: memory
   storage:
     upload-dir: uploads
+  auth:
+    issuer: smart-learning-agent
+    jwt-secret: ${APP_AUTH_JWT_SECRET:smart-learning-agent-local-development-secret-change-in-production}
+    token-ttl-hours: ${APP_AUTH_TOKEN_TTL_HOURS:12}
   ai:
     provider: mock
     base-url: ${AI_BASE_URL:}

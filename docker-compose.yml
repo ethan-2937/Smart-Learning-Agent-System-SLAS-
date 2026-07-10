@@ -40,6 +40,8 @@ services:
       MYSQL_USERNAME: root
       MYSQL_PASSWORD: root
       QDRANT_URL: http://qdrant:6333
+      APP_AUTH_JWT_SECRET: ${APP_AUTH_JWT_SECRET:-smart-learning-agent-local-development-secret-change-in-production}
+      APP_AUTH_TOKEN_TTL_HOURS: ${APP_AUTH_TOKEN_TTL_HOURS:-12}
       APP_VECTOR_PROVIDER: qdrant
       APP_VECTOR_DIMENSION: ${APP_VECTOR_DIMENSION:-64}
       APP_VECTOR_TOP_K: ${APP_VECTOR_TOP_K:-6}

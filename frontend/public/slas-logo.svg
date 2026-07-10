@@ -1,0 +1,26 @@
+﻿<svg width="240" height="120" viewBox="0 0 240 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g1" x1="25" y1="18" x2="210" y2="106" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1A73E8"/>
+      <stop offset="0.55" stop-color="#00A88F"/>
+      <stop offset="1" stop-color="#FBBC04"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="68" y1="24" x2="166" y2="92" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E8F0FE"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="240" height="120" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#1A73E8" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <rect x="18" y="18" width="204" height="84" rx="28" fill="url(#g1)" filter="url(#shadow)"/>
+  <path d="M60 76C75 62 90 56 108 60V38C90 34 74 39 60 52V76Z" fill="url(#g2)"/>
+  <path d="M180 76C165 62 150 56 132 60V38C150 34 166 39 180 52V76Z" fill="url(#g2)"/>
+  <path d="M120 37V84" stroke="white" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="120" cy="60" r="12" fill="#202124" fill-opacity="0.88"/>
+  <circle cx="120" cy="60" r="5" fill="#FBBC04"/>
+  <path d="M86 83C105 72 135 72 154 83" stroke="white" stroke-width="7" stroke-linecap="round"/>
+  <path d="M66 36L78 31L90 36L78 41L66 36Z" fill="#FFFFFF" fill-opacity="0.92"/>
+  <path d="M162 36L174 31L186 36L174 41L162 36Z" fill="#FFFFFF" fill-opacity="0.92"/>
+  <text x="120" y="97" text-anchor="middle" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="18" font-weight="900" fill="white" letter-spacing="1.5">SLAS</text>
+</svg>
