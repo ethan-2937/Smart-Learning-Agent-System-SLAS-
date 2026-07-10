@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.time.Instant;
+import java.util.List;
 
 @Component
 public class JwtAuthenticationInterceptor implements HandlerInterceptor {
@@ -39,8 +40,8 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
         try {
             JwtPrincipal principal = jwtService.verify(authorization.substring("Bearer ".length()));
             AuthUser user = authService.toAuthUser(principal.userId());
-            if (request.getRequestURI().startsWith("/api/admin") && !user.roles().contains("ADMIN")) {
-                writeForbidden(response, request, "当前账号没有管理员权限");
+            if (!isAllowed(request, user)) {
+                writeForbidden(response, request, "当前账号没有对应接口权限");
                 return false;
             }
             CurrentUserHolder.set(user);
@@ -60,6 +61,44 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
         return uri.equals("/api/auth/login")
                 || uri.equals("/api/auth/logout")
                 || uri.equals("/api/health");
+    }
+
+    private boolean isAllowed(HttpServletRequest request, AuthUser user) {
+        String uri = request.getRequestURI();
+        String method = request.getMethod();
+        if (uri.startsWith("/api/admin")) {
+            return hasRole(user, "ADMIN");
+        }
+        if (uri.startsWith("/api/auth")) {
+            return true;
+        }
+        if (uri.startsWith("/api/practice") || uri.startsWith("/api/runtime")) {
+            return true;
+        }
+        if (uri.startsWith("/api/materials") && method.equalsIgnoreCase("GET")) {
+            return hasAnyRole(user, "ADMIN", "TEACHER", "STUDENT");
+        }
+        if (uri.startsWith("/api/courses") && method.equalsIgnoreCase("GET")) {
+            return hasAnyRole(user, "ADMIN", "TEACHER", "STUDENT");
+        }
+        if (uri.startsWith("/api/knowledge-points") && method.equalsIgnoreCase("GET")) {
+            return hasAnyRole(user, "ADMIN", "TEACHER", "STUDENT");
+        }
+        return hasAnyRole(user, "ADMIN", "TEACHER");
+    }
+
+    private boolean hasAnyRole(AuthUser user, String... roles) {
+        for (String role : roles) {
+            if (hasRole(user, role)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasRole(AuthUser user, String role) {
+        List<String> roles = user.roles() == null ? List.of() : user.roles();
+        return roles.contains(role);
     }
 
     private void writeUnauthorized(HttpServletResponse response, HttpServletRequest request, String message) throws Exception {

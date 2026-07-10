@@ -191,6 +191,10 @@ const roleLabel = computed(() => {
   return '学习者'
 })
 const isAdmin = computed(() => (currentUser.value?.roles || []).includes('ADMIN'))
+const isTeacher = computed(() => (currentUser.value?.roles || []).includes('TEACHER'))
+const canManageContent = computed(() => isAdmin.value || isTeacher.value)
+const canEditStudentScope = computed(() => canManageContent.value)
+const canCreatePractice = computed(() => canManageContent.value ? approvedCount.value > 0 : true)
 const activeAdminCount = computed(() => adminUsers.value.filter((item) => item.status === 1).length)
 
 onMounted(async () => {
@@ -203,6 +207,7 @@ async function initAuth() {
   try {
     if (getStoredToken()) {
       currentUser.value = await getCurrentUser()
+      syncUserContext()
       await refreshAll()
     }
   } catch {
@@ -227,6 +232,7 @@ async function login() {
     })
     setStoredToken(result.token)
     currentUser.value = result.user
+    syncUserContext()
     ElMessage.success('登录成功')
     await refreshAll()
   } catch (error) {
@@ -246,6 +252,13 @@ async function logout() {
   currentUser.value = null
   adminUsers.value = []
   adminRoles.value = []
+  practiceSets.value = []
+  currentPractice.value = null
+  practiceAttempts.value = []
+  wrongQuestions.value = []
+  masteryRecords.value = []
+  practiceAnswers.value = {}
+  practiceResults.value = {}
   userDialogVisible.value = false
   passwordDialogVisible.value = false
   changePasswordDialogVisible.value = false
@@ -254,6 +267,22 @@ async function logout() {
 
 function scrollToSection(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function syncUserContext() {
+  if (!currentUser.value) return
+  if (!canEditStudentScope.value) {
+    studentId.value = currentUser.value.userId
+    return
+  }
+  studentId.value = studentId.value || 'demo-student'
+}
+
+function activeStudentId() {
+  if (!canEditStudentScope.value && currentUser.value) {
+    return currentUser.value.userId
+  }
+  return studentId.value.trim() || currentUser.value?.userId || 'demo-student'
 }
 
 async function loadAdminUsers() {
@@ -398,30 +427,42 @@ function roleTagType(roleCode: string) {
 
 async function refreshAll() {
   try {
-    const [courseList, materialList, questionList, workflowTemplate, runs, status] = await Promise.all([
-      listCourses(),
-      listMaterials(),
-      listQuestions(),
-      getWorkflowTemplate(),
-      listAgentRuns(),
-      getRuntimeStatus(),
-    ])
-    courses.value = courseList
-    if (!selectedCourseId.value && courseList.length > 0) {
-      selectedCourseId.value = courseList[0].courseId
-    }
-    materials.value = materialList
-    questions.value = questionList
-    workflow.value = workflowTemplate
-    agentRuns.value = runs
-    runtimeStatus.value = status
-    if (selectedCourseId.value) {
-      await loadCourseDetail(selectedCourseId.value)
+    runtimeStatus.value = await getRuntimeStatus()
+    if (canManageContent.value) {
+      const [courseList, materialList, questionList, workflowTemplate, runs] = await Promise.all([
+        listCourses(),
+        listMaterials(),
+        listQuestions(),
+        getWorkflowTemplate(),
+        listAgentRuns(),
+      ])
+      courses.value = courseList
+      if (!selectedCourseId.value && courseList.length > 0) {
+        selectedCourseId.value = courseList[0].courseId
+      }
+      materials.value = materialList
+      questions.value = questionList
+      workflow.value = workflowTemplate
+      agentRuns.value = runs
+      if (selectedCourseId.value) {
+        await loadCourseDetail(selectedCourseId.value)
+      } else {
+        knowledgePoints.value = await listKnowledgePoints()
+      }
+      if (!currentMaterial.value && materialList.length > 0) {
+        await selectMaterial(materialList[0])
+      }
     } else {
-      knowledgePoints.value = await listKnowledgePoints()
-    }
-    if (!currentMaterial.value && materialList.length > 0) {
-      await selectMaterial(materialList[0])
+      courses.value = []
+      chapters.value = []
+      knowledgePoints.value = []
+      materials.value = []
+      questions.value = []
+      chunks.value = []
+      hits.value = []
+      workflow.value = null
+      agentRuns.value = []
+      currentMaterial.value = null
     }
     await loadLearningDashboard()
     if (isAdmin.value) {
@@ -685,7 +726,7 @@ function parseOptionLines(value: string): QuestionOption[] {
 }
 
 async function loadLearningDashboard() {
-  const learner = studentId.value.trim() || 'demo-student'
+  const learner = activeStudentId()
   try {
     const [sets, attempts, wrongs, mastery] = await Promise.all([
       listPracticeSets(learner),
@@ -712,10 +753,10 @@ async function createLearningPractice() {
   practiceLoading.value = true
   try {
     const detail = await createPracticeSet({
-      studentId: studentId.value.trim() || 'demo-student',
-      courseId: selectedCourseId.value || undefined,
-      chapterId: selectedChapterId.value || undefined,
-      materialId: currentMaterial.value?.materialId,
+      studentId: activeStudentId(),
+      courseId: canManageContent.value ? selectedCourseId.value || undefined : undefined,
+      chapterId: canManageContent.value ? selectedChapterId.value || undefined : undefined,
+      materialId: canManageContent.value ? currentMaterial.value?.materialId : undefined,
       count: practiceCount.value,
     })
     currentPractice.value = detail
@@ -751,17 +792,17 @@ async function submitPracticeQuestion(question: QuestionRecord) {
     const result = await submitPractice({
       practiceId: currentPractice.value.practice.practiceId,
       questionId: question.questionId,
-      studentId: studentId.value.trim() || 'demo-student',
+      studentId: activeStudentId(),
       answerText,
     })
     practiceResults.value = { ...practiceResults.value, [question.questionId]: result }
     currentPractice.value = await getPracticeSet(currentPractice.value.practice.practiceId)
     hydratePracticeAnswers(currentPractice.value)
     const [sets, attempts, wrongs, mastery] = await Promise.all([
-      listPracticeSets(studentId.value.trim() || 'demo-student'),
-      listPracticeAttempts({ studentId: studentId.value.trim() || 'demo-student' }),
-      listWrongQuestions(studentId.value.trim() || 'demo-student'),
-      listMastery(studentId.value.trim() || 'demo-student'),
+      listPracticeSets(activeStudentId()),
+      listPracticeAttempts({ studentId: activeStudentId() }),
+      listWrongQuestions(activeStudentId()),
+      listMastery(activeStudentId()),
     ])
     practiceSets.value = sets
     practiceAttempts.value = attempts
@@ -944,11 +985,17 @@ function messageOf(error: unknown) {
         <h1>把任意教材变成可追溯、可审核、可练习的智能题库</h1>
         <p class="hero-copy">系统不绑定商务英语：英语、计算机、通识课或自定义教材都可以先切片入库，再通过向量检索和多智能体工作流生成习题。</p>
       </div>
-      <div class="metric-grid">
+      <div v-if="canManageContent" class="metric-grid">
         <div class="metric-card"><span>{{ materials.length }}</span><small>教材</small></div>
         <div class="metric-card"><span>{{ indexedCount }}</span><small>已索引</small></div>
         <div class="metric-card"><span>{{ pendingCount }}</span><small>待审核题</small></div>
         <div class="metric-card"><span>{{ approvedCount }}</span><small>已通过</small></div>
+      </div>
+      <div v-else class="metric-grid">
+        <div class="metric-card"><span>{{ practiceSets.length }}</span><small>练习任务</small></div>
+        <div class="metric-card"><span>{{ practiceAttempts.length }}</span><small>提交次数</small></div>
+        <div class="metric-card"><span>{{ wrongCount }}</span><small>累计错题</small></div>
+        <div class="metric-card"><span>{{ averageMastery }}%</span><small>平均掌握</small></div>
       </div>
     </section>
 
@@ -971,7 +1018,7 @@ function messageOf(error: unknown) {
     </section>
 
 
-    <section id="courses" class="workspace-grid">
+    <section v-if="canManageContent" id="courses" class="workspace-grid">
       <el-card class="panel" shadow="never">
         <template #header><div class="panel-title"><el-icon><DataAnalysis /></el-icon>课程与章节</div></template>
         <el-input v-model="newCourseName" placeholder="新课程名称，例如：大学英语、数据结构" />
@@ -1014,7 +1061,7 @@ function messageOf(error: unknown) {
       </el-card>
     </section>
 
-    <section id="materials" class="workspace-grid">
+    <section v-if="canManageContent" id="materials" class="workspace-grid">
       <el-card class="panel" shadow="never">
         <template #header><div class="panel-title"><el-icon><UploadFilled /></el-icon>教材上传与解析</div></template>
         <input ref="fileInput" type="file" class="hidden-input" accept=".pdf,.docx,.txt,.md,.xlsx,.xls" @change="onFileChange" />
@@ -1041,7 +1088,7 @@ function messageOf(error: unknown) {
       </el-card>
     </section>
 
-    <section id="rag" class="workspace-grid">
+    <section v-if="canManageContent" id="rag" class="workspace-grid">
       <el-card class="panel" shadow="never">
         <template #header><div class="panel-title"><el-icon><Search /></el-icon>向量检索验证</div></template>
         <el-input v-model="query" type="textarea" :rows="3" placeholder="输入要检索的学习主题，例如：报价邮件、被动语态、二叉树遍历" />
@@ -1066,7 +1113,7 @@ function messageOf(error: unknown) {
       </el-card>
     </section>
 
-    <section id="questions" class="workspace-grid wide">
+    <section v-if="canManageContent" id="questions" class="workspace-grid wide">
       <el-card class="panel" shadow="never">
         <template #header><div class="panel-title"><el-icon><MagicStick /></el-icon>生成习题</div></template>
         <el-input v-model="topic" placeholder="出题主题，例如：外贸报价、英语时态、软件测试基础" />
@@ -1124,10 +1171,10 @@ function messageOf(error: unknown) {
     <section id="learning" class="workspace-grid wide">
       <el-card class="panel" shadow="never">
         <template #header><div class="panel-title"><el-icon><DataAnalysis /></el-icon>学习练习闭环</div></template>
-        <el-input v-model="studentId" placeholder="学习者 ID，例如：demo-student" />
+        <el-input v-model="studentId" :disabled="!canEditStudentScope" placeholder="学习者 ID，例如：demo-student" />
         <div class="inline-form practice-scope-form">
           <el-input-number v-model="practiceCount" :min="1" :max="20" />
-          <el-button type="primary" :disabled="approvedCount === 0" :loading="practiceLoading" @click="createLearningPractice">生成练习任务</el-button>
+          <el-button type="primary" :disabled="!canCreatePractice" :loading="practiceLoading" @click="createLearningPractice">生成练习任务</el-button>
           <el-button :loading="practiceLoading" @click="loadLearningDashboard">刷新画像</el-button>
         </div>
         <div class="practice-scope">
@@ -1269,7 +1316,7 @@ function messageOf(error: unknown) {
       </el-card>
     </section>
 
-    <section id="agents" class="workspace-grid">
+    <section v-if="canManageContent" id="agents" class="workspace-grid">
       <el-card class="panel" shadow="never">
         <template #header><div class="panel-title"><el-icon><Cpu /></el-icon>多智能体工作流</div></template>
         <div v-for="step in workflow?.steps" :key="step.role" class="workflow-step">
