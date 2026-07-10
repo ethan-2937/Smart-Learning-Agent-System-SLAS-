@@ -5,6 +5,9 @@ import { Cpu, DataAnalysis, Document, MagicStick, Search, UploadFilled } from '@
 import type {
   AgentRunRecord,
   AgentWorkflowTemplate,
+  CourseChapterRecord,
+  CourseRecord,
+  KnowledgePointRecord,
   MaterialChunk,
   MaterialRecord,
   QuestionDifficulty,
@@ -19,22 +22,31 @@ import type {
 import {
   approveQuestion,
   batchUpdateQuestionStatus,
+  createChapter,
+  createCourse,
   exportQuestions,
   generateQuestions,
   getAgentRun,
   getRuntimeStatus,
   getWorkflowTemplate,
   listAgentRuns,
+  listChapters,
+  listCourses,
   listChunks,
+  listKnowledgePoints,
   listMaterials,
   listQuestions,
   parseMaterial,
+  refreshKnowledgePoints,
   rejectQuestion,
   retrieve,
   updateQuestion,
   uploadMaterial,
 } from './api'
 
+const courses = ref<CourseRecord[]>([])
+const chapters = ref<CourseChapterRecord[]>([])
+const knowledgePoints = ref<KnowledgePointRecord[]>([])
 const materials = ref<MaterialRecord[]>([])
 const chunks = ref<MaterialChunk[]>([])
 const questions = ref<QuestionRecord[]>([])
@@ -48,6 +60,12 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const selectedFile = ref<File | null>(null)
 const title = ref('')
 const subjectPreset = ref<SubjectPreset>('GENERAL')
+const selectedCourseId = ref('')
+const selectedChapterId = ref('')
+const newCourseName = ref('')
+const newCourseDescription = ref('')
+const newCourseSubjectPreset = ref<SubjectPreset>('GENERAL')
+const newChapterTitle = ref('')
 const query = ref('')
 const topic = ref('')
 const difficulty = ref<QuestionDifficulty>('MEDIUM')
@@ -88,6 +106,7 @@ const questionTypeOptions = [
 const indexedCount = computed(() => materials.value.filter((item) => item.status === 'INDEXED').length)
 const pendingCount = computed(() => questions.value.filter((item) => item.status === 'PENDING_REVIEW').length)
 const approvedCount = computed(() => questions.value.filter((item) => item.status === 'APPROVED').length)
+const currentCourse = computed(() => courses.value.find((item) => item.courseId === selectedCourseId.value) ?? null)
 
 onMounted(async () => {
   await refreshAll()
@@ -95,18 +114,28 @@ onMounted(async () => {
 
 async function refreshAll() {
   try {
-    const [materialList, questionList, workflowTemplate, runs, status] = await Promise.all([
+    const [courseList, materialList, questionList, workflowTemplate, runs, status] = await Promise.all([
+      listCourses(),
       listMaterials(),
       listQuestions(),
       getWorkflowTemplate(),
       listAgentRuns(),
       getRuntimeStatus(),
     ])
+    courses.value = courseList
+    if (!selectedCourseId.value && courseList.length > 0) {
+      selectedCourseId.value = courseList[0].courseId
+    }
     materials.value = materialList
     questions.value = questionList
     workflow.value = workflowTemplate
     agentRuns.value = runs
     runtimeStatus.value = status
+    if (selectedCourseId.value) {
+      await loadCourseDetail(selectedCourseId.value)
+    } else {
+      knowledgePoints.value = await listKnowledgePoints()
+    }
     if (!currentMaterial.value && materialList.length > 0) {
       await selectMaterial(materialList[0])
     }
@@ -134,7 +163,7 @@ async function uploadAndParse() {
   }
   loading.value = true
   try {
-    const uploaded = await uploadMaterial(selectedFile.value, title.value, subjectPreset.value)
+    const uploaded = await uploadMaterial(selectedFile.value, title.value, subjectPreset.value, selectedCourseId.value || undefined, selectedChapterId.value || undefined)
     const indexed = await parseMaterial(uploaded.materialId)
     ElMessage.success(`教材已解析，生成 ${indexed.chunkCount} 个切片`)
     selectedFile.value = null
@@ -154,6 +183,82 @@ async function selectMaterial(material: MaterialRecord) {
   query.value = query.value || material.title
   try {
     chunks.value = await listChunks(material.materialId)
+    knowledgePoints.value = await listKnowledgePoints({ materialId: material.materialId })
+  } catch (error) {
+    ElMessage.error(messageOf(error))
+  }
+}
+
+async function addCourse() {
+  if (!newCourseName.value.trim()) {
+    ElMessage.warning('请输入课程名称')
+    return
+  }
+  try {
+    const course = await createCourse({
+      name: newCourseName.value.trim(),
+      subjectPreset: newCourseSubjectPreset.value,
+      description: newCourseDescription.value,
+    })
+    newCourseName.value = ''
+    newCourseDescription.value = ''
+    selectedCourseId.value = course.courseId
+    courses.value = await listCourses()
+    await loadCourseDetail(course.courseId)
+    ElMessage.success('课程已创建')
+  } catch (error) {
+    ElMessage.error(messageOf(error))
+  }
+}
+
+async function selectCourse(course: CourseRecord) {
+  selectedCourseId.value = course.courseId
+  subjectPreset.value = course.subjectPreset
+  await loadCourseDetail(course.courseId)
+}
+
+async function loadCourseDetail(courseId: string) {
+  chapters.value = await listChapters(courseId)
+  if (selectedChapterId.value && !chapters.value.some((item) => item.chapterId === selectedChapterId.value)) {
+    selectedChapterId.value = ''
+  }
+  knowledgePoints.value = await listKnowledgePoints({ courseId, chapterId: selectedChapterId.value || undefined })
+}
+
+async function addChapter() {
+  if (!selectedCourseId.value) {
+    ElMessage.warning('请先选择课程')
+    return
+  }
+  if (!newChapterTitle.value.trim()) {
+    ElMessage.warning('请输入章节名称')
+    return
+  }
+  try {
+    const chapter = await createChapter(selectedCourseId.value, { title: newChapterTitle.value.trim() })
+    newChapterTitle.value = ''
+    selectedChapterId.value = chapter.chapterId
+    await loadCourseDetail(selectedCourseId.value)
+    ElMessage.success('章节已创建')
+  } catch (error) {
+    ElMessage.error(messageOf(error))
+  }
+}
+
+async function selectChapter(chapterId: string) {
+  selectedChapterId.value = chapterId
+  knowledgePoints.value = await listKnowledgePoints({ courseId: selectedCourseId.value, chapterId })
+}
+
+async function refreshCurrentKnowledgePoints() {
+  if (!currentMaterial.value) {
+    ElMessage.warning('请先选择教材')
+    return
+  }
+  try {
+    const points = await refreshKnowledgePoints(currentMaterial.value.materialId)
+    knowledgePoints.value = points
+    ElMessage.success(`已刷新 ${points.length} 个知识点`)
   } catch (error) {
     ElMessage.error(messageOf(error))
   }
@@ -349,6 +454,50 @@ function messageOf(error: unknown) {
         <strong>{{ runtimeStatus?.vectorProvider || 'memory' }} / {{ runtimeStatus?.vectorCollectionName || '-' }}</strong>
         <small>dimension {{ runtimeStatus?.vectorDimension || 64 }} / topK {{ runtimeStatus?.defaultTopK || 6 }}</small>
       </div>
+    </section>
+
+
+    <section id="courses" class="workspace-grid">
+      <el-card class="panel" shadow="never">
+        <template #header><div class="panel-title"><el-icon><DataAnalysis /></el-icon>课程与章节</div></template>
+        <el-input v-model="newCourseName" placeholder="新课程名称，例如：大学英语、数据结构" />
+        <el-select v-model="newCourseSubjectPreset" class="wide-select">
+          <el-option v-for="item in subjectOptions" :key="item.value" :label="item.label" :value="item.value" />
+        </el-select>
+        <el-input v-model="newCourseDescription" type="textarea" :rows="2" placeholder="课程说明，可选" />
+        <el-button type="primary" @click="addCourse">创建课程</el-button>
+        <div class="course-list">
+          <button v-for="course in courses" :key="course.courseId" :class="['material-item', { active: course.courseId === selectedCourseId }]" @click="selectCourse(course)">
+            <strong>{{ course.name }}</strong>
+            <span>{{ course.subjectPreset }} · {{ course.description || '暂无说明' }}</span>
+          </button>
+        </div>
+      </el-card>
+
+      <el-card class="panel" shadow="never">
+        <template #header><div class="panel-title"><el-icon><Document /></el-icon>章节与知识点</div></template>
+        <div class="chapter-create">
+          <el-input v-model="newChapterTitle" placeholder="新章节名称，例如：Unit 1 / 第一章" />
+          <el-button type="primary" :disabled="!selectedCourseId" @click="addChapter">新增章节</el-button>
+        </div>
+        <div class="chapter-list">
+          <button :class="['chapter-pill', { active: selectedChapterId === '' }]" @click="selectedChapterId = ''; selectedCourseId && loadCourseDetail(selectedCourseId)">全部章节</button>
+          <button v-for="chapter in chapters" :key="chapter.chapterId" :class="['chapter-pill', { active: chapter.chapterId === selectedChapterId }]" @click="selectChapter(chapter.chapterId)">
+            {{ chapter.chapterOrder }}. {{ chapter.title }}
+          </button>
+        </div>
+        <div class="knowledge-head">
+          <strong>候选知识点 {{ knowledgePoints.length }}</strong>
+          <el-button size="small" :disabled="!currentMaterial" @click="refreshCurrentKnowledgePoints">刷新当前教材知识点</el-button>
+        </div>
+        <div class="knowledge-list">
+          <article v-for="point in knowledgePoints.slice(0, 12)" :key="point.knowledgePointId" class="knowledge-card">
+            <strong>{{ point.name }}</strong>
+            <small>weight {{ point.weight.toFixed(2) }}</small>
+            <p>{{ point.sourceSnippet }}</p>
+          </article>
+        </div>
+      </el-card>
     </section>
 
     <section id="materials" class="workspace-grid">

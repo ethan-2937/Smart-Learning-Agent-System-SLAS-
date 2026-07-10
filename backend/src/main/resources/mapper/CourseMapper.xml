@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hlju.learning.mapper.CourseMapper">
+    <resultMap id="CourseMap" type="com.hlju.learning.domain.po.CoursePo">
+        <id property="courseId" column="course_id"/>
+        <result property="name" column="name"/>
+        <result property="subjectPreset" column="subject_preset"/>
+        <result property="description" column="description"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="ChapterMap" type="com.hlju.learning.domain.po.CourseChapterPo">
+        <id property="chapterId" column="chapter_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="title" column="title"/>
+        <result property="chapterOrder" column="chapter_order"/>
+        <result property="description" column="description"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="BindingMap" type="com.hlju.learning.domain.po.MaterialCourseBindingPo">
+        <id property="materialId" column="material_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="chapterId" column="chapter_id"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="KnowledgePointMap" type="com.hlju.learning.domain.po.KnowledgePointPo">
+        <id property="knowledgePointId" column="knowledge_point_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="chapterId" column="chapter_id"/>
+        <result property="materialId" column="material_id"/>
+        <result property="chunkId" column="chunk_id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="sourceSnippet" column="source_snippet"/>
+        <result property="weight" column="weight"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="upsertCourse">
+        INSERT INTO learning_course (course_id, name, subject_preset, description, created_at, updated_at)
+        VALUES (#{po.courseId}, #{po.name}, #{po.subjectPreset}, #{po.description}, #{po.createdAt}, #{po.updatedAt})
+        ON DUPLICATE KEY UPDATE
+          name = VALUES(name),
+          subject_preset = VALUES(subject_preset),
+          description = VALUES(description),
+          updated_at = VALUES(updated_at)
+    </insert>
+
+    <select id="findCourse" resultMap="CourseMap">
+        SELECT * FROM learning_course WHERE course_id = #{courseId}
+    </select>
+
+    <select id="findAllCourses" resultMap="CourseMap">
+        SELECT * FROM learning_course ORDER BY created_at DESC
+    </select>
+
+    <insert id="upsertChapter">
+        INSERT INTO course_chapter (chapter_id, course_id, title, chapter_order, description, created_at, updated_at)
+        VALUES (#{po.chapterId}, #{po.courseId}, #{po.title}, #{po.chapterOrder}, #{po.description}, #{po.createdAt}, #{po.updatedAt})
+        ON DUPLICATE KEY UPDATE
+          title = VALUES(title),
+          chapter_order = VALUES(chapter_order),
+          description = VALUES(description),
+          updated_at = VALUES(updated_at)
+    </insert>
+
+    <select id="findChapter" resultMap="ChapterMap">
+        SELECT * FROM course_chapter WHERE chapter_id = #{chapterId}
+    </select>
+
+    <select id="findChaptersByCourse" resultMap="ChapterMap">
+        SELECT * FROM course_chapter WHERE course_id = #{courseId} ORDER BY chapter_order ASC, created_at ASC
+    </select>
+
+    <insert id="upsertMaterialBinding">
+        INSERT INTO material_course_binding (material_id, course_id, chapter_id, created_at, updated_at)
+        VALUES (#{po.materialId}, #{po.courseId}, #{po.chapterId}, #{po.createdAt}, #{po.updatedAt})
+        ON DUPLICATE KEY UPDATE
+          course_id = VALUES(course_id),
+          chapter_id = VALUES(chapter_id),
+          updated_at = VALUES(updated_at)
+    </insert>
+
+    <select id="findMaterialBinding" resultMap="BindingMap">
+        SELECT * FROM material_course_binding WHERE material_id = #{materialId}
+    </select>
+
+    <delete id="deleteKnowledgePointsByMaterial">
+        DELETE FROM knowledge_point WHERE material_id = #{materialId}
+    </delete>
+
+    <insert id="insertKnowledgePoint">
+        INSERT INTO knowledge_point (knowledge_point_id, course_id, chapter_id, material_id, chunk_id, name, description, source_snippet, weight, created_at)
+        VALUES (#{po.knowledgePointId}, #{po.courseId}, #{po.chapterId}, #{po.materialId}, #{po.chunkId}, #{po.name}, #{po.description}, #{po.sourceSnippet}, #{po.weight}, #{po.createdAt})
+    </insert>
+
+    <select id="findKnowledgePoints" resultMap="KnowledgePointMap">
+        SELECT * FROM knowledge_point
+        <where>
+            <if test="courseId != null">course_id = #{courseId}</if>
+            <if test="chapterId != null">AND chapter_id = #{chapterId}</if>
+            <if test="materialId != null">AND material_id = #{materialId}</if>
+        </where>
+        ORDER BY weight DESC, created_at DESC
+    </select>
+</mapper>

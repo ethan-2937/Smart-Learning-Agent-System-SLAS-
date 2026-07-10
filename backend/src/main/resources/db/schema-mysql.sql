@@ -71,3 +71,49 @@ CREATE TABLE IF NOT EXISTS agent_run (
   created_at DATETIME NOT NULL,
   INDEX idx_agent_run_task (task_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS learning_course (
+  course_id VARCHAR(64) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  subject_preset VARCHAR(64) NOT NULL,
+  description TEXT,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS course_chapter (
+  chapter_id VARCHAR(64) PRIMARY KEY,
+  course_id VARCHAR(64) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  chapter_order INT DEFAULT 0,
+  description TEXT,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  INDEX idx_course_chapter_course (course_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS material_course_binding (
+  material_id VARCHAR(64) PRIMARY KEY,
+  course_id VARCHAR(64) NOT NULL,
+  chapter_id VARCHAR(64),
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  INDEX idx_material_course_binding_course (course_id),
+  INDEX idx_material_course_binding_chapter (chapter_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS knowledge_point (
+  knowledge_point_id VARCHAR(64) PRIMARY KEY,
+  course_id VARCHAR(64),
+  chapter_id VARCHAR(64),
+  material_id VARCHAR(64) NOT NULL,
+  chunk_id VARCHAR(64),
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  source_snippet TEXT,
+  weight DOUBLE DEFAULT 0,
+  created_at DATETIME NOT NULL,
+  INDEX idx_knowledge_point_course (course_id),
+  INDEX idx_knowledge_point_chapter (chapter_id),
+  INDEX idx_knowledge_point_material (material_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

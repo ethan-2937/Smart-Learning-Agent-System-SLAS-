@@ -5,6 +5,46 @@ export type QuestionDifficulty = 'EASY' | 'MEDIUM' | 'HARD'
 export type QuestionStatus = 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED'
 export type AgentRunStatus = 'RUNNING' | 'FINISHED' | 'FAILED'
 
+export interface CourseRecord {
+  courseId: string
+  name: string
+  subjectPreset: SubjectPreset
+  description: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CourseChapterRecord {
+  chapterId: string
+  courseId: string
+  title: string
+  chapterOrder: number
+  description: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface MaterialCourseBindingRecord {
+  materialId: string
+  courseId: string
+  chapterId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface KnowledgePointRecord {
+  knowledgePointId: string
+  courseId: string | null
+  chapterId: string | null
+  materialId: string
+  chunkId: string
+  name: string
+  description: string
+  sourceSnippet: string
+  weight: number
+  createdAt: string
+}
+
 export interface MaterialRecord {
   materialId: string
   title: string
@@ -165,11 +205,59 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export function uploadMaterial(file: File, title: string, subjectPreset: SubjectPreset) {
+
+export function createCourse(payload: { name: string; subjectPreset: SubjectPreset; description?: string }) {
+  return request<CourseRecord>('/api/courses', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function listCourses() {
+  return request<CourseRecord[]>('/api/courses')
+}
+
+export function createChapter(courseId: string, payload: { title: string; chapterOrder?: number; description?: string }) {
+  return request<CourseChapterRecord>(`/api/courses/${courseId}/chapters`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function listChapters(courseId: string) {
+  return request<CourseChapterRecord[]>(`/api/courses/${courseId}/chapters`)
+}
+
+export function bindMaterialToCourse(materialId: string, courseId: string, chapterId?: string) {
+  return request<MaterialCourseBindingRecord>(`/api/materials/${materialId}/course-binding`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ courseId, chapterId }),
+  })
+}
+
+export function refreshKnowledgePoints(materialId: string) {
+  return request<KnowledgePointRecord[]>(`/api/materials/${materialId}/knowledge-points/refresh`, { method: 'POST' })
+}
+
+export function listKnowledgePoints(filters: { courseId?: string; chapterId?: string; materialId?: string } = {}) {
+  const params = new URLSearchParams()
+  if (filters.courseId) params.set('courseId', filters.courseId)
+  if (filters.chapterId) params.set('chapterId', filters.chapterId)
+  if (filters.materialId) params.set('materialId', filters.materialId)
+  const suffix = params.toString() ? `?${params.toString()}` : ''
+  return request<KnowledgePointRecord[]>(`/api/knowledge-points${suffix}`)
+}
+
+export function uploadMaterial(file: File, title: string, subjectPreset: SubjectPreset, courseId?: string, chapterId?: string) {
   const body = new FormData()
   body.append('file', file)
   body.append('title', title)
   body.append('subjectPreset', subjectPreset)
+  if (courseId) body.append('courseId', courseId)
+  if (chapterId) body.append('chapterId', chapterId)
   return request<MaterialRecord>('/api/materials/upload', { method: 'POST', body })
 }
 

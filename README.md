@@ -135,6 +135,13 @@ POST /api/materials/upload
 POST /api/materials/{materialId}/parse
 GET  /api/materials
 GET  /api/materials/{materialId}/chunks
+POST /api/courses
+GET  /api/courses
+POST /api/courses/{courseId}/chapters
+GET  /api/courses/{courseId}/chapters
+POST /api/materials/{materialId}/course-binding
+POST /api/materials/{materialId}/knowledge-points/refresh
+GET  /api/knowledge-points
 POST /api/rag/retrieve
 POST /api/questions/generation-tasks
 GET  /api/questions
@@ -165,6 +172,15 @@ GET  /api/runtime/status
 - 单题编辑：修改题干、选项、答案、解析和难度。
 - 批量审核：勾选多道题后批量通过或退回。
 - Excel 导出：可按当前教材和审核状态导出题库，便于交给教师复核或放入论文演示材料。
+
+## 课程与知识点能力
+
+系统已经从“教材工具”扩展为课程型学习平台：
+
+- 课程管理：创建通用学习、英语、商务英语、计算机或自定义课程。
+- 章节管理：在课程下维护章节，教材上传时可绑定课程和章节。
+- 知识点抽取：教材解析后会根据切片关键词生成候选知识点，教师可据此组织题库和练习。
+- 检索联动：知识点保留教材来源片段，便于答辩时说明“题目和知识点都可追溯到教材证据”。
 
 
 ## AI / Vector Provider Configuration
