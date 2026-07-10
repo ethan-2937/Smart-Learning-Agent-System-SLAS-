@@ -8,8 +8,13 @@ import type {
   CourseChapterRecord,
   CourseRecord,
   KnowledgePointRecord,
+  KnowledgeMasteryRecord,
   MaterialChunk,
   MaterialRecord,
+  PracticeAttemptRecord,
+  PracticeDetail,
+  PracticeResult,
+  PracticeSetRecord,
   QuestionDifficulty,
   QuestionOption,
   QuestionRecord,
@@ -18,15 +23,18 @@ import type {
   RetrievalHit,
   RuntimeStatus,
   SubjectPreset,
+  WrongQuestionRecord,
 } from './api'
 import {
   approveQuestion,
   batchUpdateQuestionStatus,
   createChapter,
   createCourse,
+  createPracticeSet,
   exportQuestions,
   generateQuestions,
   getAgentRun,
+  getPracticeSet,
   getRuntimeStatus,
   getWorkflowTemplate,
   listAgentRuns,
@@ -34,12 +42,17 @@ import {
   listCourses,
   listChunks,
   listKnowledgePoints,
+  listMastery,
   listMaterials,
+  listPracticeAttempts,
+  listPracticeSets,
   listQuestions,
+  listWrongQuestions,
   parseMaterial,
   refreshKnowledgePoints,
   rejectQuestion,
   retrieve,
+  submitPractice,
   updateQuestion,
   uploadMaterial,
 } from './api'
@@ -56,6 +69,13 @@ const workflow = ref<AgentWorkflowTemplate | null>(null)
 const runtimeStatus = ref<RuntimeStatus | null>(null)
 const currentRun = ref<AgentRunRecord | null>(null)
 const currentMaterial = ref<MaterialRecord | null>(null)
+const practiceSets = ref<PracticeSetRecord[]>([])
+const currentPractice = ref<PracticeDetail | null>(null)
+const practiceAnswers = ref<Record<string, string>>({})
+const practiceResults = ref<Record<string, PracticeResult>>({})
+const practiceAttempts = ref<PracticeAttemptRecord[]>([])
+const wrongQuestions = ref<WrongQuestionRecord[]>([])
+const masteryRecords = ref<KnowledgeMasteryRecord[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
 const selectedFile = ref<File | null>(null)
 const title = ref('')
@@ -70,8 +90,11 @@ const query = ref('')
 const topic = ref('')
 const difficulty = ref<QuestionDifficulty>('MEDIUM')
 const count = ref(5)
+const studentId = ref('demo-student')
+const practiceCount = ref(5)
 const questionTypes = ref<QuestionType[]>(['SINGLE_CHOICE', 'SHORT_ANSWER', 'FILL_BLANK'])
 const loading = ref(false)
+const practiceLoading = ref(false)
 const selectedQuestionIds = ref<string[]>([])
 const editDialogVisible = ref(false)
 const editingQuestionId = ref('')
@@ -107,6 +130,12 @@ const indexedCount = computed(() => materials.value.filter((item) => item.status
 const pendingCount = computed(() => questions.value.filter((item) => item.status === 'PENDING_REVIEW').length)
 const approvedCount = computed(() => questions.value.filter((item) => item.status === 'APPROVED').length)
 const currentCourse = computed(() => courses.value.find((item) => item.courseId === selectedCourseId.value) ?? null)
+const wrongCount = computed(() => wrongQuestions.value.reduce((sum, item) => sum + item.wrongCount, 0))
+const averageMastery = computed(() => {
+  if (masteryRecords.value.length === 0) return 0
+  const total = masteryRecords.value.reduce((sum, item) => sum + item.mastery, 0)
+  return Math.round((total / masteryRecords.value.length) * 100)
+})
 
 onMounted(async () => {
   await refreshAll()
@@ -139,6 +168,7 @@ async function refreshAll() {
     if (!currentMaterial.value && materialList.length > 0) {
       await selectMaterial(materialList[0])
     }
+    await loadLearningDashboard()
   } catch (error) {
     ElMessage.error(messageOf(error))
   }
@@ -393,6 +423,162 @@ function parseOptionLines(value: string): QuestionOption[] {
     .filter((option) => option.text)
 }
 
+async function loadLearningDashboard() {
+  const learner = studentId.value.trim() || 'demo-student'
+  try {
+    const [sets, attempts, wrongs, mastery] = await Promise.all([
+      listPracticeSets(learner),
+      listPracticeAttempts({ studentId: learner }),
+      listWrongQuestions(learner),
+      listMastery(learner),
+    ])
+    practiceSets.value = sets
+    practiceAttempts.value = attempts
+    wrongQuestions.value = wrongs
+    masteryRecords.value = mastery
+
+    const activePracticeId = currentPractice.value?.practice.practiceId ?? sets[0]?.practiceId
+    if (activePracticeId) {
+      currentPractice.value = await getPracticeSet(activePracticeId)
+      hydratePracticeAnswers(currentPractice.value)
+    }
+  } catch (error) {
+    ElMessage.error(messageOf(error))
+  }
+}
+
+async function createLearningPractice() {
+  practiceLoading.value = true
+  try {
+    const detail = await createPracticeSet({
+      studentId: studentId.value.trim() || 'demo-student',
+      courseId: selectedCourseId.value || undefined,
+      chapterId: selectedChapterId.value || undefined,
+      materialId: currentMaterial.value?.materialId,
+      count: practiceCount.value,
+    })
+    currentPractice.value = detail
+    hydratePracticeAnswers(detail)
+    await loadLearningDashboard()
+    ElMessage.success(`已生成 ${detail.questions.length} 道练习题`)
+  } catch (error) {
+    ElMessage.error(messageOf(error))
+  } finally {
+    practiceLoading.value = false
+  }
+}
+
+async function openPractice(set: PracticeSetRecord) {
+  try {
+    const detail = await getPracticeSet(set.practiceId)
+    currentPractice.value = detail
+    hydratePracticeAnswers(detail)
+  } catch (error) {
+    ElMessage.error(messageOf(error))
+  }
+}
+
+async function submitPracticeQuestion(question: QuestionRecord) {
+  if (!currentPractice.value) return
+  const answerText = practiceAnswers.value[question.questionId]?.trim()
+  if (!answerText) {
+    ElMessage.warning('请先填写答案')
+    return
+  }
+  practiceLoading.value = true
+  try {
+    const result = await submitPractice({
+      practiceId: currentPractice.value.practice.practiceId,
+      questionId: question.questionId,
+      studentId: studentId.value.trim() || 'demo-student',
+      answerText,
+    })
+    practiceResults.value = { ...practiceResults.value, [question.questionId]: result }
+    currentPractice.value = await getPracticeSet(currentPractice.value.practice.practiceId)
+    hydratePracticeAnswers(currentPractice.value)
+    const [sets, attempts, wrongs, mastery] = await Promise.all([
+      listPracticeSets(studentId.value.trim() || 'demo-student'),
+      listPracticeAttempts({ studentId: studentId.value.trim() || 'demo-student' }),
+      listWrongQuestions(studentId.value.trim() || 'demo-student'),
+      listMastery(studentId.value.trim() || 'demo-student'),
+    ])
+    practiceSets.value = sets
+    practiceAttempts.value = attempts
+    wrongQuestions.value = wrongs
+    masteryRecords.value = mastery
+    ElMessage.success(result.correct ? '回答正确，已更新掌握度' : '已记录到错题本，建议稍后复习')
+  } catch (error) {
+    ElMessage.error(messageOf(error))
+  } finally {
+    practiceLoading.value = false
+  }
+}
+
+function hydratePracticeAnswers(detail: PracticeDetail) {
+  const nextAnswers = { ...practiceAnswers.value }
+  const nextResults = { ...practiceResults.value }
+  for (const attempt of detail.attempts) {
+    nextAnswers[attempt.questionId] = attempt.answerText
+    nextResults[attempt.questionId] = {
+      practiceId: attempt.practiceId,
+      attemptId: attempt.attemptId,
+      questionId: attempt.questionId,
+      correct: attempt.correct,
+      score: attempt.score,
+      expectedAnswer: attempt.expectedAnswer,
+      feedback: attempt.feedback,
+      knowledgeNames: attempt.knowledgeNames,
+    }
+  }
+  practiceAnswers.value = nextAnswers
+  practiceResults.value = nextResults
+}
+
+function latestAttempt(questionId: string) {
+  const attempts = currentPractice.value?.attempts
+    .filter((item) => item.questionId === questionId)
+    .sort((left, right) => right.submittedAt.localeCompare(left.submittedAt)) ?? []
+  return attempts[0] ?? null
+}
+
+function resultFor(questionId: string) {
+  const directResult = practiceResults.value[questionId]
+  if (directResult) return directResult
+  const attempt = latestAttempt(questionId)
+  if (!attempt) return null
+  return {
+    practiceId: attempt.practiceId,
+    attemptId: attempt.attemptId,
+    questionId: attempt.questionId,
+    correct: attempt.correct,
+    score: attempt.score,
+    expectedAnswer: attempt.expectedAnswer,
+    feedback: attempt.feedback,
+    knowledgeNames: attempt.knowledgeNames,
+  }
+}
+
+function scorePercent(score: number) {
+  return `${Math.round(score * 100)}%`
+}
+
+function materialName(materialId?: string | null) {
+  if (!materialId) return '全部教材'
+  return materials.value.find((item) => item.materialId === materialId)?.title ?? materialId
+}
+
+function scopeName(set: PracticeSetRecord) {
+  const course = courses.value.find((item) => item.courseId === set.courseId)?.name
+  const chapter = chapters.value.find((item) => item.chapterId === set.chapterId)?.title
+  return [course, chapter, materialName(set.materialId)].filter(Boolean).join(' / ')
+}
+
+function masteryType(value: number) {
+  if (value >= 0.8) return 'success'
+  if (value >= 0.5) return 'warning'
+  return 'exception'
+}
+
 
 async function openRun(run: AgentRunRecord) {
   currentRun.value = await getAgentRun(run.runId)
@@ -420,6 +606,7 @@ function messageOf(error: unknown) {
         <a href="#materials">教材知识库</a>
         <a href="#rag">向量检索</a>
         <a href="#questions">题库审核</a>
+        <a href="#learning">学习练习</a>
         <a href="#agents">智能体链路</a>
       </div>
     </section>
@@ -604,6 +791,99 @@ function messageOf(error: unknown) {
           </div>
           </article>
         </el-checkbox-group>
+      </el-card>
+    </section>
+
+    <section id="learning" class="workspace-grid wide">
+      <el-card class="panel" shadow="never">
+        <template #header><div class="panel-title"><el-icon><DataAnalysis /></el-icon>学习练习闭环</div></template>
+        <el-input v-model="studentId" placeholder="学习者 ID，例如：demo-student" />
+        <div class="inline-form practice-scope-form">
+          <el-input-number v-model="practiceCount" :min="1" :max="20" />
+          <el-button type="primary" :disabled="approvedCount === 0" :loading="practiceLoading" @click="createLearningPractice">生成练习任务</el-button>
+          <el-button :loading="practiceLoading" @click="loadLearningDashboard">刷新画像</el-button>
+        </div>
+        <div class="practice-scope">
+          <strong>当前范围</strong>
+          <span>{{ currentCourse?.name || '全部课程' }} / {{ selectedChapterId ? chapters.find((item) => item.chapterId === selectedChapterId)?.title : '全部章节' }} / {{ currentMaterial?.title || '全部教材' }}</span>
+          <small>系统会优先从已审核通过题目中组卷；如果没有选择教材，则按当前课程和章节筛选。</small>
+        </div>
+        <div class="practice-stats">
+          <div><strong>{{ practiceSets.length }}</strong><span>练习任务</span></div>
+          <div><strong>{{ practiceAttempts.length }}</strong><span>提交次数</span></div>
+          <div><strong>{{ wrongCount }}</strong><span>累计错题</span></div>
+          <div><strong>{{ averageMastery }}%</strong><span>平均掌握</span></div>
+        </div>
+        <div class="practice-set-list">
+          <button v-for="set in practiceSets" :key="set.practiceId" :class="['practice-set-item', { active: set.practiceId === currentPractice?.practice.practiceId }]" @click="openPractice(set)">
+            <strong>{{ set.title }}</strong>
+            <span>{{ set.status }} · {{ set.questionIds.length }} 题 · {{ scopeName(set) }}</span>
+          </button>
+        </div>
+      </el-card>
+
+      <el-card class="panel practice-panel" shadow="never">
+        <template #header>
+          <div class="panel-title question-toolbar">
+            <span>学生答题与自动批改</span>
+            <el-tag v-if="currentPractice" type="success">{{ currentPractice.practice.status }}</el-tag>
+          </div>
+        </template>
+        <div v-if="!currentPractice" class="empty-note">
+          先在左侧生成练习任务，或选择已有任务查看题目、提交答案和查看反馈。
+        </div>
+        <article v-for="question in currentPractice?.questions" :key="question.questionId" class="practice-question-card">
+          <div class="question-head">
+            <el-tag>{{ question.type }}</el-tag>
+            <el-tag type="warning">{{ question.difficulty }}</el-tag>
+            <el-tag v-if="resultFor(question.questionId)" :type="resultFor(question.questionId)?.correct ? 'success' : 'danger'">
+              {{ resultFor(question.questionId)?.correct ? '已掌握' : '需复习' }} · {{ scorePercent(resultFor(question.questionId)?.score || 0) }}
+            </el-tag>
+          </div>
+          <p class="question-prompt">{{ question.prompt }}</p>
+          <div v-if="question.options.length" class="option-list">
+            <span v-for="option in question.options" :key="option.label">{{ option.label }}. {{ option.text }}</span>
+          </div>
+          <el-input v-model="practiceAnswers[question.questionId]" type="textarea" :rows="2" placeholder="输入你的答案，选择题可填写 A/B/C/D" />
+          <div v-if="resultFor(question.questionId)" class="practice-feedback">
+            <strong>{{ resultFor(question.questionId)?.feedback }}</strong>
+            <span>参考答案：{{ resultFor(question.questionId)?.expectedAnswer }}</span>
+            <small v-if="resultFor(question.questionId)?.knowledgeNames.length">关联知识点：{{ resultFor(question.questionId)?.knowledgeNames.join(' / ') }}</small>
+          </div>
+          <div class="card-actions">
+            <el-button size="small" type="primary" :loading="practiceLoading" @click="submitPracticeQuestion(question)">提交并批改</el-button>
+          </div>
+        </article>
+      </el-card>
+    </section>
+
+    <section class="workspace-grid">
+      <el-card class="panel" shadow="never">
+        <template #header><div class="panel-title"><el-icon><Document /></el-icon>错题本</div></template>
+        <div v-if="wrongQuestions.length === 0" class="empty-note">当前学习者暂无错题。提交练习后，错误记录会自动归档到这里。</div>
+        <article v-for="item in wrongQuestions.slice(0, 8)" :key="item.questionId" class="wrong-card">
+          <div class="wrong-head">
+            <strong>错误 {{ item.wrongCount }} 次</strong>
+            <span>{{ materialName(item.materialId) }}</span>
+          </div>
+          <p>{{ item.prompt }}</p>
+          <small>你的答案：{{ item.lastAnswer || '未填写' }}</small>
+          <small>参考答案：{{ item.expectedAnswer }}</small>
+          <small>反馈：{{ item.lastFeedback }}</small>
+        </article>
+      </el-card>
+
+      <el-card class="panel" shadow="never">
+        <template #header><div class="panel-title"><el-icon><DataAnalysis /></el-icon>知识掌握度</div></template>
+        <div v-if="masteryRecords.length === 0" class="empty-note">暂无掌握度数据。每次提交练习都会按知识点累计正确率。</div>
+        <article v-for="item in masteryRecords.slice(0, 10)" :key="`${item.materialId}-${item.knowledgeName}`" class="mastery-card">
+          <div class="mastery-title">
+            <strong>{{ item.knowledgeName }}</strong>
+            <span>{{ item.correctAttempts }}/{{ item.totalAttempts }}</span>
+          </div>
+          <el-progress :percentage="Math.round(item.mastery * 100)" :status="masteryType(item.mastery)" />
+          <small>{{ materialName(item.materialId) }}</small>
+        </article>
       </el-card>
     </section>
 

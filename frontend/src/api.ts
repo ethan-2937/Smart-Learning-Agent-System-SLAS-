@@ -4,6 +4,7 @@ export type QuestionType = 'SINGLE_CHOICE' | 'TRUE_FALSE' | 'FILL_BLANK' | 'SHOR
 export type QuestionDifficulty = 'EASY' | 'MEDIUM' | 'HARD'
 export type QuestionStatus = 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED'
 export type AgentRunStatus = 'RUNNING' | 'FINISHED' | 'FAILED'
+export type PracticeSetStatus = 'ACTIVE' | 'FINISHED'
 
 export interface CourseRecord {
   courseId: string
@@ -190,6 +191,74 @@ export interface RuntimeStatus {
   defaultTopK: number
 }
 
+export interface PracticeSetRecord {
+  practiceId: string
+  title: string
+  studentId: string
+  courseId: string | null
+  chapterId: string | null
+  materialId: string | null
+  questionIds: string[]
+  status: PracticeSetStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PracticeAttemptRecord {
+  attemptId: string
+  practiceId: string
+  studentId: string
+  questionId: string
+  answerText: string
+  correct: boolean
+  score: number
+  expectedAnswer: string
+  feedback: string
+  knowledgeNames: string[]
+  submittedAt: string
+}
+
+export interface WrongQuestionRecord {
+  studentId: string
+  questionId: string
+  materialId: string
+  prompt: string
+  expectedAnswer: string
+  lastAnswer: string
+  lastFeedback: string
+  wrongCount: number
+  lastSubmittedAt: string
+}
+
+export interface KnowledgeMasteryRecord {
+  studentId: string
+  courseId: string | null
+  chapterId: string | null
+  materialId: string | null
+  knowledgeName: string
+  totalAttempts: number
+  correctAttempts: number
+  mastery: number
+  updatedAt: string
+}
+
+export interface PracticeDetail {
+  practice: PracticeSetRecord
+  questions: QuestionRecord[]
+  attempts: PracticeAttemptRecord[]
+}
+
+export interface PracticeResult {
+  practiceId: string
+  attemptId: string
+  questionId: string
+  correct: boolean
+  score: number
+  expectedAnswer: string
+  feedback: string
+  knowledgeNames: string[]
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options)
   if (!response.ok) {
@@ -347,6 +416,65 @@ export function getAgentRun(runId: string) {
   return request<AgentRunRecord>(`/api/agents/runs/${runId}`)
 }
 
+export function createPracticeSet(payload: {
+  studentId?: string
+  courseId?: string
+  chapterId?: string
+  materialId?: string
+  count?: number
+}) {
+  return request<PracticeDetail>('/api/practice/sets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function listPracticeSets(studentId?: string) {
+  const params = new URLSearchParams()
+  if (studentId) params.set('studentId', studentId)
+  const suffix = params.toString() ? `?${params.toString()}` : ''
+  return request<PracticeSetRecord[]>(`/api/practice/sets${suffix}`)
+}
+
+export function getPracticeSet(practiceId: string) {
+  return request<PracticeDetail>(`/api/practice/sets/${practiceId}`)
+}
+
+export function submitPractice(payload: {
+  practiceId?: string
+  questionId: string
+  studentId?: string
+  answerText?: string
+}) {
+  return request<PracticeResult>('/api/practice/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function listPracticeAttempts(filters: { practiceId?: string; studentId?: string } = {}) {
+  const params = new URLSearchParams()
+  if (filters.practiceId) params.set('practiceId', filters.practiceId)
+  if (filters.studentId) params.set('studentId', filters.studentId)
+  const suffix = params.toString() ? `?${params.toString()}` : ''
+  return request<PracticeAttemptRecord[]>(`/api/practice/attempts${suffix}`)
+}
+
+export function listWrongQuestions(studentId?: string) {
+  const params = new URLSearchParams()
+  if (studentId) params.set('studentId', studentId)
+  const suffix = params.toString() ? `?${params.toString()}` : ''
+  return request<WrongQuestionRecord[]>(`/api/practice/wrong-questions${suffix}`)
+}
+
+export function listMastery(studentId?: string) {
+  const params = new URLSearchParams()
+  if (studentId) params.set('studentId', studentId)
+  const suffix = params.toString() ? `?${params.toString()}` : ''
+  return request<KnowledgeMasteryRecord[]>(`/api/practice/mastery${suffix}`)
+}
 
 export function getRuntimeStatus() {
   return request<RuntimeStatus>('/api/runtime/status')

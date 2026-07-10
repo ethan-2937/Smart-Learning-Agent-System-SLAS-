@@ -140,11 +140,35 @@ h1 { margin: 0; max-width: 780px; font-size: clamp(34px, 5vw, 64px); line-height
 .workflow-step span, .workflow-step small { color: var(--muted); }
 .workflow-step.done strong { color: var(--green); }
 .run-detail { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.practice-scope-form { grid-template-columns: 120px 1fr 120px; }
+.practice-scope { display: grid; gap: 6px; margin-top: 14px; padding: 14px; border: 1px solid rgba(26,115,232,0.18); border-radius: 18px; background: linear-gradient(135deg, #f8fbff, #ffffff); }
+.practice-scope span, .practice-scope small { color: var(--muted); line-height: 1.6; }
+.practice-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 14px 0; }
+.practice-stats div { padding: 12px; border-radius: 16px; background: #fff; border: 1px solid var(--line); }
+.practice-stats strong { display: block; font-size: 26px; letter-spacing: -0.04em; }
+.practice-stats span { color: var(--muted); font-size: 12px; font-weight: 800; }
+.practice-set-list { display: grid; gap: 10px; max-height: 340px; overflow: auto; }
+.practice-set-item { width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 16px; background: #fff; text-align: left; cursor: pointer; transition: border-color 160ms ease, transform 160ms ease; }
+.practice-set-item.active, .practice-set-item:hover { border-color: rgba(26,115,232,0.52); transform: translateY(-1px); }
+.practice-set-item strong { display: block; margin-bottom: 6px; }
+.practice-set-item span { color: var(--muted); font-size: 12px; }
+.practice-panel { max-height: 920px; overflow: auto; }
+.practice-question-card, .wrong-card, .mastery-card { margin-bottom: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
+.practice-question-card .el-textarea { margin-top: 10px; }
+.practice-feedback { display: grid; gap: 4px; margin-top: 10px; padding: 12px; border-radius: 16px; background: linear-gradient(135deg, #f8fbff, #fffaf0); border: 1px solid var(--line); }
+.practice-feedback span, .practice-feedback small, .wrong-card small, .mastery-card small { color: var(--muted); line-height: 1.6; }
+.wrong-head, .mastery-title { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.wrong-head strong { color: var(--red); }
+.wrong-head span, .mastery-title span { color: var(--muted); font-size: 12px; font-weight: 800; }
+.wrong-card p { margin: 10px 0; line-height: 1.7; }
+.wrong-card small { display: block; margin-top: 4px; }
+.mastery-card .el-progress { margin: 10px 0 6px; }
+.empty-note { padding: 18px; border-radius: 18px; color: var(--muted); background: linear-gradient(135deg, #ffffff, #f8fbff); border: 1px dashed var(--line); line-height: 1.7; }
 
 @media (max-width: 900px) {
   .topbar, .hero, .workspace-grid, .workspace-grid.wide { grid-template-columns: 1fr; }
   .decor-nav { justify-self: start; }
-  .inline-form, .chapter-create { grid-template-columns: 1fr; }
+  .inline-form, .chapter-create, .practice-scope-form, .practice-stats { grid-template-columns: 1fr; }
 }
 
 

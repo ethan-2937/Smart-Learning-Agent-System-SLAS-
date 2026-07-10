@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hlju.learning.mapper.LearningMapper">
+    <resultMap id="PracticeSetMap" type="com.hlju.learning.domain.po.PracticeSetPo">
+        <id property="practiceId" column="practice_id"/>
+        <result property="title" column="title"/>
+        <result property="studentId" column="student_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="chapterId" column="chapter_id"/>
+        <result property="materialId" column="material_id"/>
+        <result property="questionIdsJson" column="question_ids_json"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+    <resultMap id="AttemptMap" type="com.hlju.learning.domain.po.PracticeAttemptPo">
+        <id property="attemptId" column="attempt_id"/>
+        <result property="practiceId" column="practice_id"/>
+        <result property="studentId" column="student_id"/>
+        <result property="questionId" column="question_id"/>
+        <result property="answerText" column="answer_text"/>
+        <result property="correct" column="correct"/>
+        <result property="score" column="score"/>
+        <result property="expectedAnswer" column="expected_answer"/>
+        <result property="feedback" column="feedback"/>
+        <result property="knowledgeNamesJson" column="knowledge_names_json"/>
+        <result property="submittedAt" column="submitted_at"/>
+    </resultMap>
+    <resultMap id="WrongQuestionMap" type="com.hlju.learning.domain.po.WrongQuestionPo">
+        <id property="studentId" column="student_id"/>
+        <id property="questionId" column="question_id"/>
+        <result property="materialId" column="material_id"/>
+        <result property="prompt" column="prompt"/>
+        <result property="expectedAnswer" column="expected_answer"/>
+        <result property="lastAnswer" column="last_answer"/>
+        <result property="lastFeedback" column="last_feedback"/>
+        <result property="wrongCount" column="wrong_count"/>
+        <result property="lastSubmittedAt" column="last_submitted_at"/>
+    </resultMap>
+    <resultMap id="MasteryMap" type="com.hlju.learning.domain.po.KnowledgeMasteryPo">
+        <id property="studentId" column="student_id"/>
+        <id property="materialId" column="material_id"/>
+        <id property="knowledgeName" column="knowledge_name"/>
+        <result property="courseId" column="course_id"/>
+        <result property="chapterId" column="chapter_id"/>
+        <result property="totalAttempts" column="total_attempts"/>
+        <result property="correctAttempts" column="correct_attempts"/>
+        <result property="mastery" column="mastery"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="upsertPracticeSet">
+        INSERT INTO learning_practice_set (practice_id, title, student_id, course_id, chapter_id, material_id, question_ids_json, status, created_at, updated_at)
+        VALUES (#{po.practiceId}, #{po.title}, #{po.studentId}, #{po.courseId}, #{po.chapterId}, #{po.materialId}, #{po.questionIdsJson}, #{po.status}, #{po.createdAt}, #{po.updatedAt})
+        ON DUPLICATE KEY UPDATE
+          title = VALUES(title),
+          student_id = VALUES(student_id),
+          course_id = VALUES(course_id),
+          chapter_id = VALUES(chapter_id),
+          material_id = VALUES(material_id),
+          question_ids_json = VALUES(question_ids_json),
+          status = VALUES(status),
+          updated_at = VALUES(updated_at)
+    </insert>
+
+    <select id="findPracticeSet" resultMap="PracticeSetMap">
+        SELECT * FROM learning_practice_set WHERE practice_id = #{practiceId}
+    </select>
+
+    <select id="findPracticeSets" resultMap="PracticeSetMap">
+        SELECT * FROM learning_practice_set
+        <where><if test="studentId != null">student_id = #{studentId}</if></where>
+        ORDER BY created_at DESC
+    </select>
+
+    <insert id="insertAttempt">
+        INSERT INTO learning_practice_attempt (attempt_id, practice_id, student_id, question_id, answer_text, correct, score, expected_answer, feedback, knowledge_names_json, submitted_at)
+        VALUES (#{po.attemptId}, #{po.practiceId}, #{po.studentId}, #{po.questionId}, #{po.answerText}, #{po.correct}, #{po.score}, #{po.expectedAnswer}, #{po.feedback}, #{po.knowledgeNamesJson}, #{po.submittedAt})
+    </insert>
+
+    <select id="findAttempts" resultMap="AttemptMap">
+        SELECT * FROM learning_practice_attempt
+        <where>
+            <if test="practiceId != null">practice_id = #{practiceId}</if>
+            <if test="studentId != null">AND student_id = #{studentId}</if>
+        </where>
+        ORDER BY submitted_at DESC
+    </select>
+
+    <select id="findWrongQuestion" resultMap="WrongQuestionMap">
+        SELECT * FROM wrong_question WHERE student_id = #{studentId} AND question_id = #{questionId}
+    </select>
+
+    <insert id="upsertWrongQuestion">
+        INSERT INTO wrong_question (student_id, question_id, material_id, prompt, expected_answer, last_answer, last_feedback, wrong_count, last_submitted_at)
+        VALUES (#{po.studentId}, #{po.questionId}, #{po.materialId}, #{po.prompt}, #{po.expectedAnswer}, #{po.lastAnswer}, #{po.lastFeedback}, #{po.wrongCount}, #{po.lastSubmittedAt})
+        ON DUPLICATE KEY UPDATE
+          material_id = VALUES(material_id),
+          prompt = VALUES(prompt),
+          expected_answer = VALUES(expected_answer),
+          last_answer = VALUES(last_answer),
+          last_feedback = VALUES(last_feedback),
+          wrong_count = VALUES(wrong_count),
+          last_submitted_at = VALUES(last_submitted_at)
+    </insert>
+
+    <select id="findWrongQuestions" resultMap="WrongQuestionMap">
+        SELECT * FROM wrong_question
+        <where><if test="studentId != null">student_id = #{studentId}</if></where>
+        ORDER BY last_submitted_at DESC
+    </select>
+
+    <select id="findMastery" resultMap="MasteryMap">
+        SELECT * FROM knowledge_mastery WHERE student_id = #{studentId} AND material_id = #{materialId} AND knowledge_name = #{knowledgeName}
+    </select>
+
+    <insert id="upsertMastery">
+        INSERT INTO knowledge_mastery (student_id, course_id, chapter_id, material_id, knowledge_name, total_attempts, correct_attempts, mastery, updated_at)
+        VALUES (#{po.studentId}, #{po.courseId}, #{po.chapterId}, #{po.materialId}, #{po.knowledgeName}, #{po.totalAttempts}, #{po.correctAttempts}, #{po.mastery}, #{po.updatedAt})
+        ON DUPLICATE KEY UPDATE
+          course_id = VALUES(course_id),
+          chapter_id = VALUES(chapter_id),
+          total_attempts = VALUES(total_attempts),
+          correct_attempts = VALUES(correct_attempts),
+          mastery = VALUES(mastery),
+          updated_at = VALUES(updated_at)
+    </insert>
+
+    <select id="findMasteryByStudent" resultMap="MasteryMap">
+        SELECT * FROM knowledge_mastery
+        <where><if test="studentId != null">student_id = #{studentId}</if></where>
+        ORDER BY mastery ASC, updated_at DESC
+    </select>
+</mapper>

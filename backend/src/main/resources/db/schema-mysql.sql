@@ -117,3 +117,67 @@ CREATE TABLE IF NOT EXISTS knowledge_point (
   INDEX idx_knowledge_point_chapter (chapter_id),
   INDEX idx_knowledge_point_material (material_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS learning_practice_set (
+  practice_id VARCHAR(64) PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  student_id VARCHAR(64) NOT NULL,
+  course_id VARCHAR(64),
+  chapter_id VARCHAR(64),
+  material_id VARCHAR(64),
+  question_ids_json TEXT,
+  status VARCHAR(32) NOT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  INDEX idx_practice_set_student (student_id),
+  INDEX idx_practice_set_course (course_id),
+  INDEX idx_practice_set_material (material_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS learning_practice_attempt (
+  attempt_id VARCHAR(64) PRIMARY KEY,
+  practice_id VARCHAR(64),
+  student_id VARCHAR(64) NOT NULL,
+  question_id VARCHAR(64) NOT NULL,
+  answer_text TEXT,
+  correct BOOLEAN DEFAULT FALSE,
+  score DOUBLE DEFAULT 0,
+  expected_answer TEXT,
+  feedback TEXT,
+  knowledge_names_json TEXT,
+  submitted_at DATETIME NOT NULL,
+  INDEX idx_practice_attempt_practice (practice_id),
+  INDEX idx_practice_attempt_student (student_id),
+  INDEX idx_practice_attempt_question (question_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS wrong_question (
+  student_id VARCHAR(64) NOT NULL,
+  question_id VARCHAR(64) NOT NULL,
+  material_id VARCHAR(64),
+  prompt TEXT,
+  expected_answer TEXT,
+  last_answer TEXT,
+  last_feedback TEXT,
+  wrong_count INT DEFAULT 1,
+  last_submitted_at DATETIME NOT NULL,
+  PRIMARY KEY (student_id, question_id),
+  INDEX idx_wrong_question_student (student_id),
+  INDEX idx_wrong_question_material (material_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS knowledge_mastery (
+  student_id VARCHAR(64) NOT NULL,
+  course_id VARCHAR(64),
+  chapter_id VARCHAR(64),
+  material_id VARCHAR(64) NOT NULL,
+  knowledge_name VARCHAR(255) NOT NULL,
+  total_attempts INT DEFAULT 0,
+  correct_attempts INT DEFAULT 0,
+  mastery DOUBLE DEFAULT 0,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (student_id, material_id, knowledge_name),
+  INDEX idx_knowledge_mastery_student (student_id),
+  INDEX idx_knowledge_mastery_course (course_id),
+  INDEX idx_knowledge_mastery_chapter (chapter_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
