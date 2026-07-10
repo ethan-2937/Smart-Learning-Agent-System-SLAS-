@@ -1,0 +1,8 @@
+.git
+.idea
+data
+_video_*
+*.mp4
+backend/target
+frontend/node_modules
+frontend/dist
