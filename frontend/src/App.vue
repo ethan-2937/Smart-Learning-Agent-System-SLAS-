@@ -8,7 +8,9 @@ import type {
   MaterialChunk,
   MaterialRecord,
   QuestionDifficulty,
+  QuestionOption,
   QuestionRecord,
+  QuestionStatus,
   QuestionType,
   RetrievalHit,
   RuntimeStatus,
@@ -16,6 +18,8 @@ import type {
 } from './api'
 import {
   approveQuestion,
+  batchUpdateQuestionStatus,
+  exportQuestions,
   generateQuestions,
   getAgentRun,
   getRuntimeStatus,
@@ -27,6 +31,7 @@ import {
   parseMaterial,
   rejectQuestion,
   retrieve,
+  updateQuestion,
   uploadMaterial,
 } from './api'
 
@@ -49,6 +54,17 @@ const difficulty = ref<QuestionDifficulty>('MEDIUM')
 const count = ref(5)
 const questionTypes = ref<QuestionType[]>(['SINGLE_CHOICE', 'SHORT_ANSWER', 'FILL_BLANK'])
 const loading = ref(false)
+const selectedQuestionIds = ref<string[]>([])
+const editDialogVisible = ref(false)
+const editingQuestionId = ref('')
+const editOptionsText = ref('')
+const exportStatus = ref<QuestionStatus | ''>('')
+const editQuestionForm = ref({
+  prompt: '',
+  answerText: '',
+  analysisText: '',
+  difficulty: 'MEDIUM' as QuestionDifficulty,
+})
 
 const subjectOptions = [
   { label: '通用学习', value: 'GENERAL' },
@@ -193,6 +209,86 @@ async function updateStatus(question: QuestionRecord, approved: boolean) {
   }
 }
 
+async function batchStatus(approved: boolean) {
+  if (selectedQuestionIds.value.length === 0) {
+    ElMessage.warning('请先选择题目')
+    return
+  }
+  try {
+    const updated = await batchUpdateQuestionStatus(selectedQuestionIds.value, approved)
+    questions.value = await listQuestions()
+    selectedQuestionIds.value = []
+    ElMessage.success(`已批量${approved ? '通过' : '退回'} ${updated.length} 道题目`)
+  } catch (error) {
+    ElMessage.error(messageOf(error))
+  }
+}
+
+function openEditQuestion(question: QuestionRecord) {
+  editingQuestionId.value = question.questionId
+  editQuestionForm.value = {
+    prompt: question.prompt,
+    answerText: question.answerText,
+    analysisText: question.analysisText,
+    difficulty: question.difficulty,
+  }
+  editOptionsText.value = optionLines(question.options)
+  editDialogVisible.value = true
+}
+
+async function saveQuestionEdit() {
+  if (!editingQuestionId.value) return
+  try {
+    const payload = {
+      prompt: editQuestionForm.value.prompt,
+      answerText: editQuestionForm.value.answerText,
+      analysisText: editQuestionForm.value.analysisText,
+      difficulty: editQuestionForm.value.difficulty,
+      options: parseOptionLines(editOptionsText.value),
+    }
+    await updateQuestion(editingQuestionId.value, payload)
+    questions.value = await listQuestions()
+    editDialogVisible.value = false
+    ElMessage.success('题目已保存')
+  } catch (error) {
+    ElMessage.error(messageOf(error))
+  }
+}
+
+async function exportQuestionExcel() {
+  try {
+    const blob = await exportQuestions(currentMaterial.value?.materialId, exportStatus.value || undefined)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `smart-learning-questions-${Date.now()}.xlsx`
+    link.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('题库 Excel 已导出')
+  } catch (error) {
+    ElMessage.error(messageOf(error))
+  }
+}
+
+function optionLines(options: QuestionOption[]) {
+  return options.map((option) => `${option.label}|${option.text}|${option.correct}`).join('\n')
+}
+
+function parseOptionLines(value: string): QuestionOption[] {
+  return value.split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      const parts = line.split('|')
+      const label = (parts[0] || String.fromCharCode(65 + index)).trim()
+      const text = (parts[1] || parts[0] || '').trim()
+      const correctText = (parts[2] || '').trim().toLowerCase()
+      return { label, text, correct: ['true', '1', 'yes', 'y', '正确'].includes(correctText) }
+    })
+    .filter((option) => option.text)
+}
+
+
 async function openRun(run: AgentRunRecord) {
   currentRun.value = await getAgentRun(run.runId)
 }
@@ -322,9 +418,25 @@ function messageOf(error: unknown) {
       </el-card>
 
       <el-card class="panel question-panel" shadow="never">
-        <template #header><div class="panel-title">题库审核</div></template>
-        <article v-for="question in questions" :key="question.questionId" class="question-card">
+        <template #header>
+          <div class="panel-title question-toolbar">
+            <span>题库审核</span>
+            <div class="toolbar-actions">
+              <el-select v-model="exportStatus" placeholder="导出状态" clearable size="small">
+                <el-option label="待审核" value="PENDING_REVIEW" />
+                <el-option label="已通过" value="APPROVED" />
+                <el-option label="已退回" value="REJECTED" />
+              </el-select>
+              <el-button size="small" @click="exportQuestionExcel">导出 Excel</el-button>
+              <el-button size="small" type="success" :disabled="selectedQuestionIds.length === 0" @click="batchStatus(true)">批量通过</el-button>
+              <el-button size="small" type="danger" plain :disabled="selectedQuestionIds.length === 0" @click="batchStatus(false)">批量退回</el-button>
+            </div>
+          </div>
+        </template>
+        <el-checkbox-group v-model="selectedQuestionIds" class="question-select-group">
+          <article v-for="question in questions" :key="question.questionId" class="question-card">
           <div class="question-head">
+            <el-checkbox :label="question.questionId">选择</el-checkbox>
             <el-tag>{{ question.type }}</el-tag>
             <el-tag type="warning">{{ question.difficulty }}</el-tag>
             <el-tag :type="question.status === 'APPROVED' ? 'success' : question.status === 'REJECTED' ? 'danger' : 'info'">{{ question.status }}</el-tag>
@@ -337,10 +449,12 @@ function messageOf(error: unknown) {
           <p><strong>解析：</strong>{{ question.analysisText }}</p>
           <p class="source-line"><strong>来源：</strong>{{ question.sourceRefs[0]?.chapterTitle }} · {{ question.sourceRefs[0]?.snippet }}</p>
           <div class="card-actions">
+            <el-button size="small" @click="openEditQuestion(question)">编辑</el-button>
             <el-button size="small" type="success" @click="updateStatus(question, true)">通过</el-button>
             <el-button size="small" type="danger" plain @click="updateStatus(question, false)">退回</el-button>
           </div>
-        </article>
+          </article>
+        </el-checkbox-group>
       </el-card>
     </section>
 
@@ -370,5 +484,34 @@ function messageOf(error: unknown) {
         </div>
       </el-card>
     </section>
+
+
+    <el-dialog v-model="editDialogVisible" title="编辑题目" width="720px" class="question-edit-dialog">
+      <el-form label-position="top">
+        <el-form-item label="题干">
+          <el-input v-model="editQuestionForm.prompt" type="textarea" :rows="4" />
+        </el-form-item>
+        <el-form-item label="选项（每行格式：A|选项内容|true，非选择题可留空）">
+          <el-input v-model="editOptionsText" type="textarea" :rows="4" />
+        </el-form-item>
+        <el-form-item label="参考答案">
+          <el-input v-model="editQuestionForm.answerText" type="textarea" :rows="3" />
+        </el-form-item>
+        <el-form-item label="解析">
+          <el-input v-model="editQuestionForm.analysisText" type="textarea" :rows="3" />
+        </el-form-item>
+        <el-form-item label="难度">
+          <el-select v-model="editQuestionForm.difficulty">
+            <el-option label="简单" value="EASY" />
+            <el-option label="中等" value="MEDIUM" />
+            <el-option label="困难" value="HARD" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveQuestionEdit">保存</el-button>
+      </template>
+    </el-dialog>
   </main>
 </template>

@@ -25,4 +25,16 @@ public record QuestionRecord(
         return new QuestionRecord(questionId, taskId, materialId, type, difficulty, subjectPreset, prompt, options,
                 answerText, analysisText, sourceRefs, nextStatus, createdAt, Instant.now());
     }
+
+    public QuestionRecord withContent(String nextPrompt, List<QuestionOption> nextOptions, String nextAnswerText,
+                                      String nextAnalysisText, QuestionDifficulty nextDifficulty) {
+        return new QuestionRecord(questionId, taskId, materialId, type,
+                nextDifficulty == null ? difficulty : nextDifficulty,
+                subjectPreset,
+                nextPrompt == null || nextPrompt.isBlank() ? prompt : nextPrompt,
+                nextOptions == null ? options : nextOptions,
+                nextAnswerText == null || nextAnswerText.isBlank() ? answerText : nextAnswerText,
+                nextAnalysisText == null ? analysisText : nextAnalysisText,
+                sourceRefs, status, createdAt, Instant.now());
+    }
 }

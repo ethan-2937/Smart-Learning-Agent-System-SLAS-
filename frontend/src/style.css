@@ -113,10 +113,16 @@ h1 { margin: 0; max-width: 780px; font-size: clamp(34px, 5vw, 64px); line-height
 .question-panel { max-height: 860px; overflow: auto; }
 .question-card { margin-bottom: 14px; }
 .question-head { display: flex; gap: 8px; flex-wrap: wrap; }
+.question-toolbar { justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.toolbar-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.toolbar-actions .el-select { width: 120px; margin-top: 0; }
+.toolbar-actions .el-button { width: auto; margin-top: 0; }
+.question-select-group { display: block; }
 .question-prompt { white-space: pre-wrap; font-weight: 850; line-height: 1.7; }
 .option-list { display: grid; gap: 6px; margin: 10px 0; color: var(--muted); }
 .source-line { color: var(--muted); font-size: 13px; }
 .card-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.question-edit-dialog .el-select { width: 100%; }
 .workflow-step { display: grid; gap: 6px; margin-bottom: 10px; }
 .workflow-step strong { color: var(--blue); }
 .workflow-step span, .workflow-step small { color: var(--muted); }

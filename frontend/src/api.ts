@@ -74,6 +74,14 @@ export interface QuestionRecord {
   updatedAt: string
 }
 
+
+export interface UpdateQuestionPayload {
+  prompt: string
+  options: QuestionOption[]
+  answerText: string
+  analysisText: string
+  difficulty: QuestionDifficulty
+}
 export interface GenerationTaskRecord {
   taskId: string
   materialId: string
@@ -202,6 +210,33 @@ export function generateQuestions(payload: {
 
 export function listQuestions() {
   return request<QuestionRecord[]>('/api/questions')
+}
+
+export function updateQuestion(questionId: string, payload: UpdateQuestionPayload) {
+  return request<QuestionRecord>(`/api/questions/${questionId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function batchUpdateQuestionStatus(questionIds: string[], approved: boolean) {
+  return request<QuestionRecord[]>('/api/questions/batch-status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ questionIds, approved }),
+  })
+}
+
+export function exportQuestions(materialId?: string, status?: QuestionStatus) {
+  const params = new URLSearchParams()
+  if (materialId) params.set('materialId', materialId)
+  if (status) params.set('status', status)
+  const suffix = params.toString() ? `?${params.toString()}` : ''
+  return fetch(`/api/questions/export${suffix}`).then((response) => {
+    if (!response.ok) throw new Error(`Export failed: ${response.status}`)
+    return response.blob()
+  })
 }
 
 export function approveQuestion(questionId: string) {

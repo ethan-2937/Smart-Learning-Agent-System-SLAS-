@@ -138,8 +138,11 @@ GET  /api/materials/{materialId}/chunks
 POST /api/rag/retrieve
 POST /api/questions/generation-tasks
 GET  /api/questions
+PUT  /api/questions/{questionId}
 POST /api/questions/{questionId}/approve
 POST /api/questions/{questionId}/reject
+POST /api/questions/batch-status
+GET  /api/questions/export
 GET  /api/agents/workflow-template
 GET  /api/agents/runs
 GET  /api/agents/runs/{runId}
@@ -149,11 +152,19 @@ GET  /api/runtime/status
 
 ## 后续开发重点
 
-1. 完善 `QdrantVectorStore` 的真实 upsert/search HTTP 调用。
-2. 接入真实 LLM 和 Embedding API，同时保留 Mock 模式。
-3. 增加课程、课时、学生账号、学习记录、错题本。
-4. 增加教师编辑题目、批量审核、发布到课时。
-5. 增加基于教材来源的题目质量评估指标。
+1. 增加课程、课时、班级和学生账号。
+2. 增加学生练习记录、错题本和知识点掌握度统计。
+3. 增加题目发布到课时、练习卷组卷和练习结果分析。
+4. 增加基于教材来源的题目质量评估指标。
+5. 接入真实 Embedding 模型，提升 Qdrant 语义检索效果。
+
+## 题库审核能力
+
+当前题库模块已经支持教师二次加工：
+
+- 单题编辑：修改题干、选项、答案、解析和难度。
+- 批量审核：勾选多道题后批量通过或退回。
+- Excel 导出：可按当前教材和审核状态导出题库，便于交给教师复核或放入论文演示材料。
 
 
 ## AI / Vector Provider Configuration
