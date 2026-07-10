@@ -39,6 +39,10 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
         try {
             JwtPrincipal principal = jwtService.verify(authorization.substring("Bearer ".length()));
             AuthUser user = authService.toAuthUser(principal.userId());
+            if (request.getRequestURI().startsWith("/api/admin") && !user.roles().contains("ADMIN")) {
+                writeForbidden(response, request, "当前账号没有管理员权限");
+                return false;
+            }
             CurrentUserHolder.set(user);
             return true;
         } catch (AuthException ex) {
@@ -60,6 +64,13 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
 
     private void writeUnauthorized(HttpServletResponse response, HttpServletRequest request, String message) throws Exception {
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding("UTF-8");
+        objectMapper.writeValue(response.getWriter(), new ApiError(message, request.getRequestURI(), Instant.now()));
+    }
+
+    private void writeForbidden(HttpServletResponse response, HttpServletRequest request, String message) throws Exception {
+        response.setStatus(HttpStatus.FORBIDDEN.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
         objectMapper.writeValue(response.getWriter(), new ApiError(message, request.getRequestURI(), Instant.now()));

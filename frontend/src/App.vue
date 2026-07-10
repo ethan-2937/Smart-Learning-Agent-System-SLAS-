@@ -5,6 +5,7 @@ import { Cpu, DataAnalysis, Document, MagicStick, Search, UploadFilled } from '@
 import type {
   AgentRunRecord,
   AgentWorkflowTemplate,
+  AdminUserRecord,
   AuthUser,
   CourseChapterRecord,
   CourseRecord,
@@ -23,14 +24,18 @@ import type {
   QuestionType,
   RetrievalHit,
   RuntimeStatus,
+  RoleOption,
   SubjectPreset,
+  UpsertUserPayload,
   WrongQuestionRecord,
 } from './api'
 import {
   approveQuestion,
   batchUpdateQuestionStatus,
+  changePassword,
   clearStoredToken,
   createChapter,
+  createAdminUser,
   createCourse,
   createPracticeSet,
   exportQuestions,
@@ -41,6 +46,8 @@ import {
   getRuntimeStatus,
   getStoredToken,
   getWorkflowTemplate,
+  listAdminRoles,
+  listAdminUsers,
   listAgentRuns,
   listChapters,
   listCourses,
@@ -57,9 +64,11 @@ import {
   parseMaterial,
   refreshKnowledgePoints,
   rejectQuestion,
+  resetAdminPassword,
   retrieve,
   submitPractice,
   setStoredToken,
+  updateAdminUser,
   updateQuestion,
   uploadMaterial,
 } from './api'
@@ -82,6 +91,27 @@ const currentUser = ref<AuthUser | null>(null)
 const loginBusy = ref(false)
 const loginError = ref('')
 const loginForm = ref({ username: 'admin', password: 'admin123' })
+const adminUsers = ref<AdminUserRecord[]>([])
+const adminRoles = ref<RoleOption[]>([])
+const adminKeyword = ref('')
+const adminLoading = ref(false)
+const userDialogVisible = ref(false)
+const userSaving = ref(false)
+const userDialogMode = ref<'create' | 'edit'>('create')
+const userForm = ref({
+  userId: '',
+  username: '',
+  password: '',
+  realName: '',
+  roles: ['STUDENT'],
+  status: 1,
+})
+const passwordDialogVisible = ref(false)
+const passwordSaving = ref(false)
+const passwordForm = ref({ userId: '', username: '', password: '' })
+const changePasswordDialogVisible = ref(false)
+const changePasswordSaving = ref(false)
+const changePasswordForm = ref({ oldPassword: '', newPassword: '', confirmPassword: '' })
 const practiceSets = ref<PracticeSetRecord[]>([])
 const currentPractice = ref<PracticeDetail | null>(null)
 const practiceAnswers = ref<Record<string, string>>({})
@@ -160,6 +190,8 @@ const roleLabel = computed(() => {
   if (roles.includes('STUDENT')) return '学生账号'
   return '学习者'
 })
+const isAdmin = computed(() => (currentUser.value?.roles || []).includes('ADMIN'))
+const activeAdminCount = computed(() => adminUsers.value.filter((item) => item.status === 1).length)
 
 onMounted(async () => {
   await initAuth()
@@ -212,11 +244,156 @@ async function logout() {
   }
   clearStoredToken()
   currentUser.value = null
+  adminUsers.value = []
+  adminRoles.value = []
+  userDialogVisible.value = false
+  passwordDialogVisible.value = false
+  changePasswordDialogVisible.value = false
   ElMessage.success('已退出登录')
 }
 
 function scrollToSection(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+async function loadAdminUsers() {
+  if (!isAdmin.value) return
+  adminLoading.value = true
+  try {
+    if (adminRoles.value.length === 0) {
+      adminRoles.value = await listAdminRoles()
+    }
+    adminUsers.value = await listAdminUsers(adminKeyword.value.trim() || undefined)
+  } catch (error) {
+    ElMessage.error(messageOf(error))
+  } finally {
+    adminLoading.value = false
+  }
+}
+
+function openCreateUser() {
+  userDialogMode.value = 'create'
+  userForm.value = {
+    userId: '',
+    username: '',
+    password: '',
+    realName: '',
+    roles: ['STUDENT'],
+    status: 1,
+  }
+  userDialogVisible.value = true
+}
+
+function openEditUser(user: AdminUserRecord) {
+  userDialogMode.value = 'edit'
+  userForm.value = {
+    userId: user.userId,
+    username: user.username,
+    password: '',
+    realName: user.realName || '',
+    roles: user.roles.length ? [...user.roles] : ['STUDENT'],
+    status: user.status,
+  }
+  userDialogVisible.value = true
+}
+
+async function saveUser() {
+  if (!userForm.value.username.trim()) {
+    ElMessage.warning('请输入用户名')
+    return
+  }
+  if (userDialogMode.value === 'create' && !userForm.value.password) {
+    ElMessage.warning('新建用户需要设置初始密码')
+    return
+  }
+  const payload: UpsertUserPayload = {
+    username: userForm.value.username.trim(),
+    password: userForm.value.password || undefined,
+    realName: userForm.value.realName.trim() || undefined,
+    roles: userForm.value.roles.length ? userForm.value.roles : ['STUDENT'],
+    status: userForm.value.status,
+  }
+  userSaving.value = true
+  try {
+    if (userDialogMode.value === 'create') {
+      await createAdminUser(payload)
+    } else {
+      await updateAdminUser(userForm.value.userId, payload)
+    }
+    userDialogVisible.value = false
+    ElMessage.success('账号已保存')
+    await loadAdminUsers()
+  } catch (error) {
+    ElMessage.error(messageOf(error))
+  } finally {
+    userSaving.value = false
+  }
+}
+
+function openResetPassword(user: AdminUserRecord) {
+  passwordForm.value = { userId: user.userId, username: user.username, password: '' }
+  passwordDialogVisible.value = true
+}
+
+async function submitResetPassword() {
+  if (passwordForm.value.password.length < 6) {
+    ElMessage.warning('新密码至少 6 位')
+    return
+  }
+  passwordSaving.value = true
+  try {
+    await resetAdminPassword(passwordForm.value.userId, passwordForm.value.password)
+    passwordDialogVisible.value = false
+    ElMessage.success('密码已重置')
+  } catch (error) {
+    ElMessage.error(messageOf(error))
+  } finally {
+    passwordSaving.value = false
+  }
+}
+
+function openChangePassword() {
+  changePasswordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
+  changePasswordDialogVisible.value = true
+}
+
+async function submitChangePassword() {
+  if (!changePasswordForm.value.oldPassword) {
+    ElMessage.warning('请输入当前密码')
+    return
+  }
+  if (changePasswordForm.value.newPassword.length < 6) {
+    ElMessage.warning('新密码至少 6 位')
+    return
+  }
+  if (changePasswordForm.value.newPassword !== changePasswordForm.value.confirmPassword) {
+    ElMessage.warning('两次输入的新密码不一致')
+    return
+  }
+  changePasswordSaving.value = true
+  try {
+    await changePassword({
+      oldPassword: changePasswordForm.value.oldPassword,
+      newPassword: changePasswordForm.value.newPassword,
+    })
+    changePasswordDialogVisible.value = false
+    ElMessage.success('密码已修改，请牢记新密码')
+  } catch (error) {
+    ElMessage.error(messageOf(error))
+  } finally {
+    changePasswordSaving.value = false
+  }
+}
+
+function roleName(roleCode: string) {
+  return adminRoles.value.find((item) => item.roleCode === roleCode)?.roleName || roleCode
+}
+
+function roleTagType(roleCode: string) {
+  if (roleCode === 'ADMIN') return 'danger'
+  if (roleCode === 'TEACHER') return 'primary'
+  if (roleCode === 'STUDENT') return 'success'
+  return 'info'
 }
 
 async function refreshAll() {
@@ -247,6 +424,12 @@ async function refreshAll() {
       await selectMaterial(materialList[0])
     }
     await loadLearningDashboard()
+    if (isAdmin.value) {
+      await loadAdminUsers()
+      if (adminRoles.value.length === 0) {
+        adminRoles.value = await listAdminRoles()
+      }
+    }
   } catch (error) {
     ElMessage.error(messageOf(error))
   }
@@ -739,6 +922,7 @@ function messageOf(error: unknown) {
         <button type="button" @click="scrollToSection('rag')">向量检索</button>
         <button type="button" @click="scrollToSection('questions')">题库审核</button>
         <button type="button" @click="scrollToSection('learning')">学习练习</button>
+        <button v-if="isAdmin" type="button" @click="scrollToSection('users')">账号管理</button>
         <button type="button" @click="scrollToSection('agents')">智能体链路</button>
       </nav>
       <div class="account-area">
@@ -749,6 +933,7 @@ function messageOf(error: unknown) {
             <small>{{ roleLabel }} · JWT 已登录</small>
           </span>
         </div>
+        <el-button round @click="openChangePassword">改密</el-button>
         <el-button round @click="logout">退出</el-button>
       </div>
     </header>
@@ -1029,6 +1214,61 @@ function messageOf(error: unknown) {
       </el-card>
     </section>
 
+    <section v-if="isAdmin" id="users" class="workspace-grid wide">
+      <el-card class="panel admin-panel" shadow="never">
+        <template #header>
+          <div class="panel-title question-toolbar">
+            <span>账号与角色管理</span>
+            <el-button size="small" type="primary" @click="openCreateUser">新建账号</el-button>
+          </div>
+        </template>
+        <div class="admin-summary">
+          <article><small>账号总数</small><strong>{{ adminUsers.length }}</strong></article>
+          <article><small>启用账号</small><strong>{{ activeAdminCount }}</strong></article>
+          <article><small>角色类型</small><strong>{{ adminRoles.length }}</strong></article>
+        </div>
+        <div class="admin-toolbar">
+          <el-input v-model="adminKeyword" clearable placeholder="搜索用户名、姓名或角色" @keyup.enter="loadAdminUsers" @clear="loadAdminUsers" />
+          <el-button :loading="adminLoading" @click="loadAdminUsers">刷新</el-button>
+        </div>
+        <div class="admin-user-list" v-loading="adminLoading">
+          <article v-for="user in adminUsers" :key="user.userId" class="admin-user-card">
+            <div class="admin-user-main">
+              <span class="avatar">{{ (user.realName || user.username).slice(0, 2).toUpperCase() }}</span>
+              <div>
+                <strong>{{ user.realName || user.username }}</strong>
+                <small>{{ user.username }} · {{ user.lastLoginAt ? `最近登录 ${new Date(user.lastLoginAt).toLocaleString()}` : '尚未登录' }}</small>
+              </div>
+            </div>
+            <div class="role-chip-list">
+              <el-tag v-for="role in user.roles" :key="role" :type="roleTagType(role)" effect="light">{{ roleName(role) }}</el-tag>
+              <el-tag :type="user.status === 1 ? 'success' : 'info'" effect="light">{{ user.status === 1 ? '启用' : '停用' }}</el-tag>
+            </div>
+            <div class="card-actions">
+              <el-button size="small" @click="openEditUser(user)">编辑</el-button>
+              <el-button size="small" type="warning" plain @click="openResetPassword(user)">重置密码</el-button>
+            </div>
+          </article>
+        </div>
+      </el-card>
+
+      <el-card class="panel" shadow="never">
+        <template #header><div class="panel-title"><el-icon><DataAnalysis /></el-icon>权限说明</div></template>
+        <div class="role-explain-list">
+          <article v-for="role in adminRoles" :key="role.roleCode" class="role-explain-card">
+            <el-tag :type="roleTagType(role.roleCode)" effect="light">{{ role.roleCode }}</el-tag>
+            <div>
+              <strong>{{ role.roleName }}</strong>
+              <p>{{ role.description }}</p>
+            </div>
+          </article>
+        </div>
+        <div class="empty-note">
+          当前版本已经具备 JWT 登录、管理员账号维护和个人改密能力。后续可以在此基础上继续细分“教师可维护题库、学生只可练习”的接口级权限。
+        </div>
+      </el-card>
+    </section>
+
     <section id="agents" class="workspace-grid">
       <el-card class="panel" shadow="never">
         <template #header><div class="panel-title"><el-icon><Cpu /></el-icon>多智能体工作流</div></template>
@@ -1056,6 +1296,70 @@ function messageOf(error: unknown) {
       </el-card>
     </section>
 
+
+    <el-dialog v-model="userDialogVisible" :title="userDialogMode === 'create' ? '新建账号' : '编辑账号'" width="720px" class="account-dialog">
+      <el-form label-position="top">
+        <div class="admin-form-grid">
+          <el-form-item label="用户名">
+            <el-input v-model="userForm.username" placeholder="3-32 位字母、数字、下划线、点或短横线" />
+          </el-form-item>
+          <el-form-item label="姓名/昵称">
+            <el-input v-model="userForm.realName" placeholder="例如：张老师 / Demo Student" />
+          </el-form-item>
+          <el-form-item v-if="userDialogMode === 'create'" label="初始密码">
+            <el-input v-model="userForm.password" type="password" show-password placeholder="至少 6 位" />
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select v-model="userForm.status">
+              <el-option label="启用" :value="1" />
+              <el-option label="停用" :value="0" />
+            </el-select>
+          </el-form-item>
+          <el-form-item class="admin-form-full" label="角色">
+            <el-checkbox-group v-model="userForm.roles">
+              <el-checkbox-button v-for="role in adminRoles" :key="role.roleCode" :label="role.roleCode">{{ role.roleName }}</el-checkbox-button>
+            </el-checkbox-group>
+          </el-form-item>
+        </div>
+      </el-form>
+      <template #footer>
+        <el-button @click="userDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="userSaving" @click="saveUser">保存账号</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="passwordDialogVisible" title="重置密码" width="460px">
+      <el-form label-position="top">
+        <el-form-item label="目标账号">
+          <el-input v-model="passwordForm.username" disabled />
+        </el-form-item>
+        <el-form-item label="新密码">
+          <el-input v-model="passwordForm.password" type="password" show-password placeholder="至少 6 位" @keyup.enter="submitResetPassword" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="passwordDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="passwordSaving" @click="submitResetPassword">确认重置</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="changePasswordDialogVisible" title="修改当前账号密码" width="500px">
+      <el-form label-position="top">
+        <el-form-item label="当前密码">
+          <el-input v-model="changePasswordForm.oldPassword" type="password" show-password />
+        </el-form-item>
+        <el-form-item label="新密码">
+          <el-input v-model="changePasswordForm.newPassword" type="password" show-password placeholder="至少 6 位" />
+        </el-form-item>
+        <el-form-item label="确认新密码">
+          <el-input v-model="changePasswordForm.confirmPassword" type="password" show-password @keyup.enter="submitChangePassword" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="changePasswordDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="changePasswordSaving" @click="submitChangePassword">保存新密码</el-button>
+      </template>
+    </el-dialog>
 
     <el-dialog v-model="editDialogVisible" title="编辑题目" width="720px" class="question-edit-dialog">
       <el-form label-position="top">

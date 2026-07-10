@@ -22,6 +22,39 @@
         SELECT * FROM app_user WHERE user_id = #{userId} LIMIT 1
     </select>
 
+    <select id="findAll" resultMap="UserMap">
+        SELECT * FROM app_user
+        <where>
+            <if test="keyword != null and keyword != ''">
+                username LIKE CONCAT('%', #{keyword}, '%')
+                OR real_name LIKE CONCAT('%', #{keyword}, '%')
+                OR roles_json LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY created_at DESC
+    </select>
+
+    <insert id="insertUser">
+        INSERT INTO app_user (user_id, username, password_hash, real_name, roles_json, status, created_at, updated_at, last_login_at)
+        VALUES (#{userId}, #{username}, #{passwordHash}, #{realName}, #{rolesJson}, #{status}, #{createdAt}, #{updatedAt}, #{lastLoginAt})
+    </insert>
+
+    <update id="updateUser">
+        UPDATE app_user
+        SET username = #{username},
+            real_name = #{realName},
+            roles_json = #{rolesJson},
+            status = #{status},
+            updated_at = #{updatedAt}
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="updatePassword">
+        UPDATE app_user
+        SET password_hash = #{passwordHash}, updated_at = #{updatedAt}
+        WHERE user_id = #{userId}
+    </update>
+
     <update id="updateLastLoginAt">
         UPDATE app_user
         SET last_login_at = #{lastLoginAt}, updated_at = #{lastLoginAt}

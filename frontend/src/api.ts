@@ -23,6 +23,31 @@ export interface AuthResponse {
   user: AuthUser
 }
 
+export interface AdminUserRecord {
+  userId: string
+  username: string
+  realName: string | null
+  roles: string[]
+  status: number
+  createdAt: string
+  updatedAt: string
+  lastLoginAt: string | null
+}
+
+export interface RoleOption {
+  roleCode: string
+  roleName: string
+  description: string
+}
+
+export interface UpsertUserPayload {
+  username: string
+  password?: string
+  realName?: string
+  roles: string[]
+  status: number
+}
+
 export interface CourseRecord {
   courseId: string
   name: string
@@ -334,6 +359,45 @@ export function getCurrentUser() {
 
 export function logout() {
   return request<{ success: boolean }>('/api/auth/logout', { method: 'POST', skipAuth: true })
+}
+
+export function changePassword(payload: { oldPassword: string; newPassword: string }) {
+  return request<{ success: boolean }>('/api/auth/password', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function listAdminRoles() {
+  return request<RoleOption[]>('/api/admin/roles')
+}
+
+export function listAdminUsers(keyword?: string) {
+  const params = new URLSearchParams()
+  if (keyword) params.set('keyword', keyword)
+  const suffix = params.toString() ? `?${params.toString()}` : ''
+  return request<AdminUserRecord[]>(`/api/admin/users${suffix}`)
+}
+
+export function createAdminUser(payload: UpsertUserPayload) {
+  return request<AdminUserRecord>('/api/admin/users', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateAdminUser(userId: string, payload: UpsertUserPayload) {
+  return request<AdminUserRecord>(`/api/admin/users/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function resetAdminPassword(userId: string, password: string) {
+  return request<{ success: boolean }>(`/api/admin/users/${userId}/password`, {
+    method: 'POST',
+    body: JSON.stringify({ password }),
+  })
 }
 
 

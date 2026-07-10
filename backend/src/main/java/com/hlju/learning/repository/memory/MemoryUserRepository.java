@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -42,6 +43,36 @@ public class MemoryUserRepository implements UserRepository {
     }
 
     @Override
+    public List<UserAccountRecord> findAll(String keyword) {
+        String normalized = keyword == null ? "" : keyword.trim().toLowerCase();
+        return users.values().stream()
+                .filter(user -> normalized.isBlank()
+                        || user.username().toLowerCase().contains(normalized)
+                        || (user.realName() != null && user.realName().toLowerCase().contains(normalized))
+                        || user.roles().stream().anyMatch(role -> role.toLowerCase().contains(normalized)))
+                .sorted(Comparator.comparing(UserAccountRecord::createdAt).reversed())
+                .toList();
+    }
+
+    @Override
+    public void save(UserAccountRecord user) {
+        findByUsername(user.username())
+                .filter(existing -> !existing.userId().equals(user.userId()))
+                .ifPresent(existing -> {
+                    throw new IllegalArgumentException("用户名已存在：" + user.username());
+                });
+        users.put(user.userId(), user);
+    }
+
+    @Override
+    public void updatePassword(String userId, String passwordHash, Instant updatedAt) {
+        UserAccountRecord current = users.get(userId);
+        if (current != null) {
+            save(current.withPasswordHash(passwordHash, updatedAt));
+        }
+    }
+
+    @Override
     public void updateLastLoginAt(String userId, Instant lastLoginAt) {
         UserAccountRecord current = users.get(userId);
         if (current != null) {
@@ -49,7 +80,4 @@ public class MemoryUserRepository implements UserRepository {
         }
     }
 
-    private void save(UserAccountRecord user) {
-        users.put(user.userId(), user);
-    }
 }

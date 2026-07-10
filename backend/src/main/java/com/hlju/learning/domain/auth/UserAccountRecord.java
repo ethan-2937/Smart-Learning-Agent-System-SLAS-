@@ -21,4 +21,15 @@ public record UserAccountRecord(
     public UserAccountRecord withLastLoginAt(Instant value) {
         return new UserAccountRecord(userId, username, passwordHash, realName, roles, status, createdAt, updatedAt, value);
     }
+
+    public UserAccountRecord withProfile(String nextUsername, String nextRealName, List<String> nextRoles,
+                                         int nextStatus, Instant nextUpdatedAt) {
+        return new UserAccountRecord(userId, nextUsername, passwordHash, nextRealName, nextRoles,
+                nextStatus, createdAt, nextUpdatedAt, lastLoginAt);
+    }
+
+    public UserAccountRecord withPasswordHash(String nextPasswordHash, Instant nextUpdatedAt) {
+        return new UserAccountRecord(userId, username, nextPasswordHash, realName, roles,
+                status, createdAt, nextUpdatedAt, lastLoginAt);
+    }
 }

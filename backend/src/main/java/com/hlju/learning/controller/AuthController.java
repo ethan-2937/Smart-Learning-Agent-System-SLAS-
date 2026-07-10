@@ -2,6 +2,7 @@ package com.hlju.learning.controller;
 
 import com.hlju.learning.domain.auth.AuthResponse;
 import com.hlju.learning.domain.auth.AuthUser;
+import com.hlju.learning.domain.auth.ChangePasswordRequest;
 import com.hlju.learning.domain.auth.LoginRequest;
 import com.hlju.learning.security.CurrentUserHolder;
 import com.hlju.learning.service.AuthService;
@@ -29,6 +30,12 @@ public class AuthController {
     @GetMapping("/api/auth/me")
     public AuthUser me() {
         return CurrentUserHolder.getRequired();
+    }
+
+    @PostMapping("/api/auth/password")
+    public Map<String, Object> changePassword(@RequestBody @Valid ChangePasswordRequest request) {
+        authService.changePassword(CurrentUserHolder.getRequired(), request);
+        return Map.of("success", true);
     }
 
     @PostMapping("/api/auth/logout")

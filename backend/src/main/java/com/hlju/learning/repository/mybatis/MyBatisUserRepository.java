@@ -37,8 +37,42 @@ public class MyBatisUserRepository implements UserRepository {
     }
 
     @Override
+    public List<UserAccountRecord> findAll(String keyword) {
+        return mapper.findAll(blankToNull(keyword)).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public void save(UserAccountRecord user) {
+        UserPo po = toPo(user);
+        if (mapper.findById(user.userId()) == null) {
+            mapper.insertUser(po);
+        } else {
+            mapper.updateUser(po);
+        }
+    }
+
+    @Override
+    public void updatePassword(String userId, String passwordHash, Instant updatedAt) {
+        mapper.updatePassword(userId, passwordHash, toLocal(updatedAt));
+    }
+
+    @Override
     public void updateLastLoginAt(String userId, Instant lastLoginAt) {
         mapper.updateLastLoginAt(userId, toLocal(lastLoginAt));
+    }
+
+    private UserPo toPo(UserAccountRecord record) {
+        UserPo po = new UserPo();
+        po.setUserId(record.userId());
+        po.setUsername(record.username());
+        po.setPasswordHash(record.passwordHash());
+        po.setRealName(record.realName());
+        po.setRolesJson(jsonCodec.toJson(record.roles()));
+        po.setStatus(record.status());
+        po.setCreatedAt(toLocal(record.createdAt()));
+        po.setUpdatedAt(toLocal(record.updatedAt()));
+        po.setLastLoginAt(record.lastLoginAt() == null ? null : toLocal(record.lastLoginAt()));
+        return po;
     }
 
     private UserAccountRecord toDomain(UserPo po) {
@@ -54,5 +88,9 @@ public class MyBatisUserRepository implements UserRepository {
 
     private Instant toInstant(LocalDateTime value) {
         return value == null ? Instant.now() : value.toInstant(ZoneOffset.UTC);
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }
