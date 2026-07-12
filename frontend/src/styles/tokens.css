@@ -1,0 +1,66 @@
+:root {
+  --blue: #2368d9;
+  --blue-strong: #174fae;
+  --blue-soft: #eaf2ff;
+  --teal: #0f8f7b;
+  --teal-soft: #e8f7f3;
+  --yellow: #d99a21;
+  --yellow-soft: #fff6df;
+  --red: #d84f55;
+  --red-soft: #fff0f1;
+  --ink: #172b3d;
+  --ink-2: #31465a;
+  --muted: #6a7b8c;
+  --muted-2: #94a1ae;
+  --line: #dce5ed;
+  --line-strong: #cbd8e3;
+  --surface: #ffffff;
+  --surface-soft: #f7f9fc;
+  --page: #f1f5f9;
+  --sidebar-width: 252px;
+  --shadow-sm: 0 4px 14px rgba(34, 61, 82, 0.06);
+  --shadow-md: 0 16px 42px rgba(34, 61, 82, 0.11);
+  color: var(--ink);
+  font-family: "HarmonyOS Sans SC", "MiSans", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
+  font-synthesis: none;
+  background: var(--page);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: var(--page);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background:
+    linear-gradient(rgba(38, 93, 134, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38, 93, 134, 0.025) 1px, transparent 1px),
+    var(--page);
+  background-size: 32px 32px;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 3px solid rgba(35, 104, 217, 0.24);
+  outline-offset: 2px;
+}

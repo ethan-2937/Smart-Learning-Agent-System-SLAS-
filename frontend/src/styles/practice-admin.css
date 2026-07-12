@@ -1,0 +1,418 @@
+.question-panel,
+.practice-panel,
+.admin-panel {
+  max-height: calc(100vh - 140px);
+  overflow: auto;
+  scrollbar-color: var(--line-strong) transparent;
+  scrollbar-width: thin;
+}
+
+.question-card,
+.practice-question-card,
+.wrong-card,
+.mastery-card {
+  margin-bottom: 10px;
+}
+
+.question-head,
+.question-toolbar,
+.toolbar-actions,
+.card-actions,
+.role-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.question-toolbar {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.toolbar-actions {
+  justify-content: flex-end;
+}
+
+.toolbar-actions .el-select {
+  width: 118px;
+  margin-top: 0;
+}
+
+.toolbar-actions .el-button,
+.card-actions .el-button {
+  width: auto;
+  margin: 0;
+}
+
+.question-select-group {
+  display: block;
+}
+
+.question-prompt {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.question-card > p:not(.question-prompt),
+.practice-question-card > p:not(.question-prompt) {
+  color: var(--ink-2);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.option-list {
+  display: grid;
+  gap: 5px;
+  margin: 9px 0;
+  padding: 10px;
+  border-radius: 5px;
+  background: var(--surface-soft);
+  color: var(--ink-2);
+  font-size: 11px;
+}
+
+.source-line {
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+  color: var(--muted) !important;
+  font-size: 10px !important;
+}
+
+.card-actions {
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.question-edit-dialog .el-select,
+.account-dialog .el-select {
+  width: 100%;
+}
+
+.workflow-step {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--blue);
+}
+
+.workflow-step strong {
+  color: var(--blue-strong);
+  font-size: 12px;
+}
+
+.workflow-step span,
+.workflow-step small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.workflow-step.done {
+  border-left-color: var(--teal);
+}
+
+.workflow-step.done strong {
+  color: var(--teal);
+}
+
+.run-detail {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.practice-scope-form {
+  grid-template-columns: 110px minmax(0, 1fr);
+}
+
+.practice-scope-form .el-input-number {
+  width: 100%;
+  max-width: 100%;
+}
+
+.practice-scope-form .el-button:last-child {
+  grid-column: 1 / -1;
+}
+
+.practice-scope {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #cfdeee;
+  border-radius: 6px;
+  background: var(--blue-soft);
+}
+
+.practice-scope strong {
+  color: var(--blue-strong);
+  font-size: 11px;
+}
+
+.practice-scope span,
+.practice-scope small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.practice-stats,
+.admin-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.practice-stats div,
+.admin-summary article {
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-soft);
+}
+
+.practice-stats strong,
+.admin-summary strong {
+  display: block;
+  color: var(--ink);
+  font-size: 21px;
+  line-height: 1.2;
+}
+
+.practice-stats span,
+.admin-summary small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.practice-set-list {
+  display: grid;
+  max-height: 330px;
+  gap: 8px;
+  overflow: auto;
+}
+
+.practice-question-card .el-textarea {
+  margin-top: 9px;
+}
+
+.practice-feedback {
+  display: grid;
+  gap: 4px;
+  margin-top: 9px;
+  padding: 11px;
+  border: 1px solid #bfe2d8;
+
+  border-left: 3px solid var(--teal);
+  border-radius: 6px;
+  background: var(--teal-soft);
+}
+
+.practice-feedback strong {
+  color: #147060;
+  font-size: 11px;
+}
+
+.practice-feedback span,
+.practice-feedback small,
+.wrong-card small,
+.mastery-card small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.wrong-card {
+  border-left: 3px solid var(--red);
+}
+
+.wrong-head strong {
+  color: var(--red);
+  font-size: 11px;
+}
+
+.wrong-head span,
+.mastery-title span {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.wrong-card p {
+  margin: 9px 0;
+  color: var(--ink-2);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.wrong-card small {
+  display: block;
+  margin-top: 3px;
+}
+
+.mastery-title strong {
+  color: var(--ink-2);
+  font-size: 11px;
+}
+
+.mastery-card .el-progress {
+  margin: 9px 0 6px;
+}
+
+.empty-note {
+  padding: 18px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.65;
+  text-align: center;
+}
+
+.admin-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 0;
+}
+
+.admin-summary article {
+  border-top: 3px solid var(--blue);
+  background: white;
+}
+
+.admin-summary article:nth-child(2) {
+  border-top-color: var(--teal);
+}
+
+.admin-summary article:nth-child(3) {
+  border-top-color: var(--yellow);
+}
+
+.admin-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 94px;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+
+.admin-user-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(180px, 0.7fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.admin-user-main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-user-main > div {
+  min-width: 0;
+}
+
+.admin-user-main strong,
+.admin-user-main small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-user-main strong {
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.admin-user-main small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.role-explain-list {
+  margin-bottom: 12px;
+}
+
+.role-explain-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  background: var(--surface-soft);
+}
+
+.role-explain-card strong {
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.role-explain-card p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.admin-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-form-full {
+  grid-column: 1 / -1;
+}
+
+.el-button {
+  border-radius: 6px;
+  font-weight: 750;
+}
+
+.el-button--primary {
+  --el-button-bg-color: var(--blue);
+  --el-button-border-color: var(--blue);
+  --el-button-hover-bg-color: #3479e7;
+  --el-button-hover-border-color: #3479e7;
+  --el-button-active-bg-color: var(--blue-strong);
+  --el-button-active-border-color: var(--blue-strong);
+}
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner,
+.el-input-number {
+  border-radius: 6px !important;
+}
+
+.el-input__wrapper,
+.el-select__wrapper {
+  min-height: 38px;
+}
+
+.el-card {
+  border: 0;
+}
+
+.el-tag {
+  border-radius: 4px;
+  font-weight: 750;
+}
+
+.el-dialog {
+  max-width: calc(100vw - 28px);
+  border-radius: 8px;
+}

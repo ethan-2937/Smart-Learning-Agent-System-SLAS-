@@ -1,7 +1,28 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Cpu, DataAnalysis, Document, MagicStick, Search, UploadFilled } from '@element-plus/icons-vue'
+import {
+  Collection,
+  Connection,
+  Cpu,
+  DataAnalysis,
+  Document,
+  Files,
+  HomeFilled,
+  Lock,
+  MagicStick,
+  Menu,
+  Notebook,
+  Reading,
+  Refresh,
+  Search,
+  SwitchButton,
+  TrendCharts,
+  UploadFilled,
+  User,
+} from '@element-plus/icons-vue'
+import DashboardOverview from './features/dashboard/DashboardOverview.vue'
+import LoginView from './features/auth/LoginView.vue'
 import type {
   AgentRunRecord,
   AgentWorkflowTemplate,
@@ -73,6 +94,8 @@ import {
   uploadMaterial,
 } from './api'
 
+type WorkspaceView = 'dashboard' | 'courses' | 'materials' | 'rag' | 'questions' | 'learning' | 'progress' | 'users' | 'agents'
+
 const courses = ref<CourseRecord[]>([])
 const chapters = ref<CourseChapterRecord[]>([])
 const knowledgePoints = ref<KnowledgePointRecord[]>([])
@@ -90,7 +113,8 @@ const authLoading = ref(true)
 const currentUser = ref<AuthUser | null>(null)
 const loginBusy = ref(false)
 const loginError = ref('')
-const loginForm = ref({ username: 'admin', password: 'admin123' })
+const activeView = ref<WorkspaceView>('dashboard')
+const sidebarOpen = ref(false)
 const adminUsers = ref<AdminUserRecord[]>([])
 const adminRoles = ref<RoleOption[]>([])
 const adminKeyword = ref('')
@@ -179,6 +203,18 @@ const averageMastery = computed(() => {
   const total = masteryRecords.value.reduce((sum, item) => sum + item.mastery, 0)
   return Math.round((total / masteryRecords.value.length) * 100)
 })
+const recentAccuracy = computed(() => {
+  if (practiceAttempts.value.length === 0) return 0
+  const correct = practiceAttempts.value.filter((item) => item.correct).length
+  return Math.round((correct / practiceAttempts.value.length) * 100)
+})
+const greeting = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 6) return '夜深了'
+  if (hour < 12) return '上午好'
+  if (hour < 18) return '下午好'
+  return '晚上好'
+})
 const userInitial = computed(() => {
   const name = currentUser.value?.realName || currentUser.value?.username || 'U'
   return name.slice(0, 2).toUpperCase()
@@ -196,6 +232,26 @@ const canManageContent = computed(() => isAdmin.value || isTeacher.value)
 const canEditStudentScope = computed(() => canManageContent.value)
 const canCreatePractice = computed(() => canManageContent.value ? approvedCount.value > 0 : true)
 const activeAdminCount = computed(() => adminUsers.value.filter((item) => item.status === 1).length)
+const viewMeta = computed(() => {
+  const views: Record<WorkspaceView, { title: string; description: string }> = {
+    dashboard: {
+      title: canManageContent.value ? '教学工作概览' : '我的学习概览',
+      description: canManageContent.value ? '从教材入库到练习反馈，掌握当前教学内容的处理进度。' : '查看练习进度、答题表现和需要优先复习的知识点。',
+    },
+    courses: { title: '课程与知识点', description: '维护课程章节结构，并检查教材自动提取的知识点。' },
+    materials: { title: '教材知识库', description: '上传教材并完成解析、切片和向量索引。' },
+    rag: { title: '检索验证', description: '验证问题能否召回可靠的教材片段，为生成习题提供证据。' },
+    questions: { title: '智能题库', description: '配置多智能体生成任务，审核、编辑并导出习题。' },
+    learning: {
+      title: canManageContent.value ? '练习任务' : '我的练习',
+      description: canManageContent.value ? '按学习者和内容范围组卷，并查看自动批改结果。' : '完成分配给你的练习，并根据即时反馈订正答案。',
+    },
+    progress: { title: '学习画像', description: '结合错题与知识掌握度，定位下一步复习重点。' },
+    users: { title: '账号与权限', description: '维护系统账号、角色和启用状态。' },
+    agents: { title: '智能体运行', description: '查看多智能体分工、执行步骤和最近运行结果。' },
+  }
+  return views[activeView.value]
+})
 
 onMounted(async () => {
   await initAuth()
@@ -218,8 +274,8 @@ async function initAuth() {
   }
 }
 
-async function login() {
-  if (!loginForm.value.username.trim() || !loginForm.value.password) {
+async function login(credentials: { username: string; password: string }) {
+  if (!credentials.username.trim() || !credentials.password) {
     loginError.value = '请输入用户名和密码'
     return
   }
@@ -227,11 +283,12 @@ async function login() {
   loginError.value = ''
   try {
     const result = await loginWithPassword({
-      username: loginForm.value.username.trim(),
-      password: loginForm.value.password,
+      username: credentials.username.trim(),
+      password: credentials.password,
     })
     setStoredToken(result.token)
     currentUser.value = result.user
+    activeView.value = 'dashboard'
     syncUserContext()
     ElMessage.success('登录成功')
     await refreshAll()
@@ -250,6 +307,8 @@ async function logout() {
   }
   clearStoredToken()
   currentUser.value = null
+  activeView.value = 'dashboard'
+  sidebarOpen.value = false
   adminUsers.value = []
   adminRoles.value = []
   practiceSets.value = []
@@ -265,8 +324,21 @@ async function logout() {
   ElMessage.success('已退出登录')
 }
 
-function scrollToSection(id: string) {
-  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+function setActiveView(view: WorkspaceView) {
+  const managementViews: WorkspaceView[] = ['courses', 'materials', 'rag', 'questions', 'agents']
+  if (managementViews.includes(view) && !canManageContent.value) return
+  if (view === 'users' && !isAdmin.value) return
+  activeView.value = view
+  sidebarOpen.value = false
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function handleAccountCommand(command: 'password' | 'logout') {
+  if (command === 'password') {
+    openChangePassword()
+    return
+  }
+  void logout()
 }
 
 function syncUserContext() {
@@ -893,145 +965,171 @@ function messageOf(error: unknown) {
 
 <template>
   <div v-if="authLoading" class="auth-loading">
-    <span class="auth-loading__orb">SL</span>
-    <strong>正在确认登录状态...</strong>
+    <img :src="logoUrl" alt="SLAS" />
+    <div class="auth-loading__copy">
+      <strong>正在进入学习空间</strong>
+      <span>正在确认身份与服务状态...</span>
+    </div>
+    <span class="auth-loading__bar" aria-hidden="true"></span>
   </div>
 
-  <section v-else-if="!currentUser" class="login-shell login-shell--official">
-    <div class="login-orbit login-orbit--one"></div>
-    <div class="login-orbit login-orbit--two"></div>
-    <div class="login-stage">
-      <aside class="login-poster">
-        <div class="login-poster__brand">
-          <span class="brand-mark brand-logo-wrap"><img :src="logoUrl" alt="Smart Learning Agent" /></span>
-          <span>
-            <strong>Smart Learning Agent</strong>
-            <small>通用学习 · RAG · 多智能体</small>
-          </span>
-        </div>
-        <div class="login-poster__copy">
-          <span class="login-eyebrow">LEARNING WORKSPACE</span>
-          <h1>把教材、题库和练习过程连接成学习闭环</h1>
-          <p>登录后可以上传教材、生成习题、审核题库、创建学生练习，并查看错题本与知识掌握度。</p>
-        </div>
-        <div class="login-poster__note">
-          <span>默认演示账号</span>
-          <strong>管理员：admin / admin123；教师：teacher / teacher123；学生：student / student123</strong>
-        </div>
-      </aside>
+  <LoginView v-else-if="!currentUser" :busy="loginBusy" :error="loginError" :logo-url="logoUrl" @submit="login" />
 
-      <div class="login-card login-card--official">
-        <div class="login-card__head">
-          <span class="login-eyebrow">SECURE SIGN IN</span>
-          <h2>登录智能学习系统</h2>
-          <p>系统使用 JWT 保存登录状态，请在正式部署前修改 `.env` 中的 `APP_AUTH_JWT_SECRET`。</p>
-        </div>
-        <el-alert v-if="loginError" :title="loginError" type="error" show-icon :closable="false" />
-        <div class="login-form">
-          <label>
-            <span>用户名</span>
-            <el-input v-model="loginForm.username" size="large" placeholder="请输入用户名" @keyup.enter="login" />
-          </label>
-          <label>
-            <span>密码</span>
-            <el-input v-model="loginForm.password" size="large" type="password" show-password placeholder="请输入密码" @keyup.enter="login" />
-          </label>
-          <el-button type="primary" size="large" round :loading="loginBusy" @click="login">进入学习工作台</el-button>
-        </div>
-        <div class="login-hint login-hint--official">
-          <strong>说明</strong>
-          <span>当前版本先实现登录鉴权，后续可继续扩展用户管理、角色权限和学生班级绑定。</span>
-        </div>
-      </div>
-    </div>
-  </section>
+  <div v-else class="app-layout">
+    <button v-if="sidebarOpen" class="sidebar-overlay" type="button" aria-label="关闭导航" @click="sidebarOpen = false"></button>
 
-  <main v-else class="app-shell">
-    <div class="ambient ambient-one"></div>
-    <div class="ambient ambient-two"></div>
-
-    <header class="app-header">
-      <button class="brand" type="button" @click="scrollToSection('courses')">
-        <span class="brand-mark brand-logo-wrap"><img :src="logoUrl" alt="Smart Learning Agent" /></span>
+    <aside :class="['app-sidebar', { open: sidebarOpen }]">
+      <button class="sidebar-brand" type="button" @click="setActiveView('dashboard')">
+        <span class="brand-mark"><img :src="logoUrl" alt="SLAS 标志" /></span>
         <span>
-          <strong>Smart Learning Agent</strong>
-          <small>通用学习 · RAG · 多智能体出题</small>
+          <strong>SLAS 智学系统</strong>
+          <small>Smart Learning Agent</small>
         </span>
       </button>
-      <nav class="decor-nav" aria-label="系统导航">
-        <button type="button" @click="scrollToSection('materials')">教材知识库</button>
-        <button type="button" @click="scrollToSection('rag')">向量检索</button>
-        <button type="button" @click="scrollToSection('questions')">题库审核</button>
-        <button type="button" @click="scrollToSection('learning')">学习练习</button>
-        <button v-if="isAdmin" type="button" @click="scrollToSection('users')">账号管理</button>
-        <button type="button" @click="scrollToSection('agents')">智能体链路</button>
-      </nav>
-      <div class="account-area">
-        <div class="user-chip">
-          <span class="avatar">{{ userInitial }}</span>
-          <span>
-            <strong>{{ currentUser.realName || currentUser.username }}</strong>
-            <small>{{ roleLabel }} · JWT 已登录</small>
-          </span>
+
+      <nav class="sidebar-nav" aria-label="主导航">
+        <div class="nav-group">
+          <span class="nav-group__label">工作台</span>
+          <button :class="{ active: activeView === 'dashboard' }" type="button" @click="setActiveView('dashboard')">
+            <el-icon><HomeFilled /></el-icon><span>概览</span>
+          </button>
+          <button :class="{ active: activeView === 'learning' }" type="button" @click="setActiveView('learning')">
+            <el-icon><Reading /></el-icon><span>{{ canManageContent ? '练习任务' : '我的练习' }}</span>
+          </button>
+          <button :class="{ active: activeView === 'progress' }" type="button" @click="setActiveView('progress')">
+            <el-icon><TrendCharts /></el-icon><span>学习画像</span>
+            <em v-if="wrongCount > 0">{{ wrongCount }}</em>
+          </button>
         </div>
-        <el-button round @click="openChangePassword">改密</el-button>
-        <el-button round @click="logout">退出</el-button>
-      </div>
-    </header>
 
-    <section class="home-hero">
-      <div>
-        <p class="eyebrow">Graduation Design Workspace</p>
-        <h1>把任意教材变成可追溯、可审核、可练习的智能题库</h1>
-        <p class="hero-copy">系统不绑定商务英语：英语、计算机、通识课或自定义教材都可以先切片入库，再通过向量检索和多智能体工作流生成习题。</p>
-      </div>
-      <div v-if="canManageContent" class="metric-grid">
-        <div class="metric-card"><span>{{ materials.length }}</span><small>教材</small></div>
-        <div class="metric-card"><span>{{ indexedCount }}</span><small>已索引</small></div>
-        <div class="metric-card"><span>{{ pendingCount }}</span><small>待审核题</small></div>
-        <div class="metric-card"><span>{{ approvedCount }}</span><small>已通过</small></div>
-      </div>
-      <div v-else class="metric-grid">
-        <div class="metric-card"><span>{{ practiceSets.length }}</span><small>练习任务</small></div>
-        <div class="metric-card"><span>{{ practiceAttempts.length }}</span><small>提交次数</small></div>
-        <div class="metric-card"><span>{{ wrongCount }}</span><small>累计错题</small></div>
-        <div class="metric-card"><span>{{ averageMastery }}%</span><small>平均掌握</small></div>
-      </div>
-    </section>
+        <div v-if="canManageContent" class="nav-group">
+          <span class="nav-group__label">内容与题库</span>
+          <button :class="{ active: activeView === 'courses' }" type="button" @click="setActiveView('courses')">
+            <el-icon><Collection /></el-icon><span>课程与知识点</span>
+          </button>
+          <button :class="{ active: activeView === 'materials' }" type="button" @click="setActiveView('materials')">
+            <el-icon><Files /></el-icon><span>教材知识库</span>
+          </button>
+          <button :class="{ active: activeView === 'rag' }" type="button" @click="setActiveView('rag')">
+            <el-icon><Search /></el-icon><span>检索验证</span>
+          </button>
+          <button :class="{ active: activeView === 'questions' }" type="button" @click="setActiveView('questions')">
+            <el-icon><Notebook /></el-icon><span>智能题库</span>
+            <em v-if="pendingCount > 0">{{ pendingCount }}</em>
+          </button>
+          <button :class="{ active: activeView === 'agents' }" type="button" @click="setActiveView('agents')">
+            <el-icon><Connection /></el-icon><span>智能体运行</span>
+          </button>
+        </div>
 
-    <section class="runtime-strip glass-card">
-      <div>
-        <span>AI Model</span>
-        <strong>{{ runtimeStatus?.aiProvider || 'mock' }} / {{ runtimeStatus?.aiModel || '-' }}</strong>
-        <small>{{ runtimeStatus?.aiApiKeyConfigured ? 'remote key configured' : 'mock or key not configured' }}</small>
+        <div v-if="isAdmin" class="nav-group">
+          <span class="nav-group__label">系统管理</span>
+          <button :class="{ active: activeView === 'users' }" type="button" @click="setActiveView('users')">
+            <el-icon><User /></el-icon><span>账号与权限</span>
+          </button>
+        </div>
+      </nav>
+
+      <div class="sidebar-status">
+        <span :class="['status-dot', { ready: runtimeStatus }]" aria-hidden="true"></span>
+        <div>
+          <strong>{{ runtimeStatus ? '系统服务正常' : '正在检查服务' }}</strong>
+          <small>{{ runtimeStatus?.aiProvider || 'AI' }} · {{ runtimeStatus?.vectorProvider || 'Vector DB' }}</small>
+        </div>
       </div>
-      <div>
-        <span>Embedding</span>
-        <strong>{{ runtimeStatus?.embeddingProvider || 'mock' }} / {{ runtimeStatus?.embeddingModel || '-' }}</strong>
-        <small>{{ runtimeStatus?.embeddingApiKeyConfigured ? 'remote embedding enabled' : 'local mock embedding' }}</small>
-      </div>
-      <div>
-        <span>Vector DB</span>
-        <strong>{{ runtimeStatus?.vectorProvider || 'memory' }} / {{ runtimeStatus?.vectorCollectionName || '-' }}</strong>
-        <small>dimension {{ runtimeStatus?.vectorDimension || 64 }} / topK {{ runtimeStatus?.defaultTopK || 6 }}</small>
-      </div>
-    </section>
+    </aside>
+
+    <section class="workspace-shell">
+      <header class="app-topbar">
+        <el-tooltip content="打开导航" placement="bottom">
+          <button class="icon-button mobile-menu" type="button" aria-label="打开导航" @click="sidebarOpen = true">
+            <el-icon><Menu /></el-icon>
+          </button>
+        </el-tooltip>
+
+        <div class="page-context">
+          <span>学习工作台 / {{ viewMeta.title }}</span>
+          <h1>{{ viewMeta.title }}</h1>
+          <p>{{ viewMeta.description }}</p>
+        </div>
+
+        <div class="topbar-actions">
+          <el-tooltip content="刷新当前数据" placement="bottom">
+            <button class="icon-button" type="button" aria-label="刷新当前数据" @click="refreshAll">
+              <el-icon><Refresh /></el-icon>
+            </button>
+          </el-tooltip>
+          <el-dropdown trigger="click" placement="bottom-end" @command="handleAccountCommand">
+            <button class="user-menu" type="button">
+              <span class="avatar">{{ userInitial }}</span>
+              <span class="user-menu__copy">
+                <strong>{{ currentUser.realName || currentUser.username }}</strong>
+                <small>{{ roleLabel }}</small>
+              </span>
+              <span class="user-menu__caret">⌄</span>
+            </button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="password"><el-icon><Lock /></el-icon>修改密码</el-dropdown-item>
+                <el-dropdown-item command="logout" divided><el-icon><SwitchButton /></el-icon>退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
+      </header>
+
+      <main class="main-content">
+
+        <DashboardOverview
+          v-if="activeView === 'dashboard'"
+          :can-manage-content="canManageContent"
+          :role-label="roleLabel"
+          :display-name="currentUser.realName || currentUser.username"
+          :greeting="greeting"
+          :materials-count="materials.length"
+          :indexed-count="indexedCount"
+          :approved-count="approvedCount"
+          :pending-count="pendingCount"
+          :practice-set-count="practiceSets.length"
+          :practice-attempt-count="practiceAttempts.length"
+          :recent-accuracy="recentAccuracy"
+          :average-mastery="averageMastery"
+          :wrong-count="wrongCount"
+          :mastery-records="masteryRecords"
+          :hits-count="hits.length"
+          :current-course-name="currentCourse?.name"
+          :current-material-title="currentMaterial?.title"
+          :current-practice="currentPractice"
+          :runtime-status="runtimeStatus"
+          @navigate="setActiveView"
+        />
 
 
-    <section v-if="canManageContent" id="courses" class="workspace-grid">
+
+    <section v-if="canManageContent && activeView === 'courses'" id="courses" class="workspace-grid view-section">
       <el-card class="panel" shadow="never">
         <template #header><div class="panel-title"><el-icon><DataAnalysis /></el-icon>课程与章节</div></template>
-        <el-input v-model="newCourseName" placeholder="新课程名称，例如：大学英语、数据结构" />
-        <el-select v-model="newCourseSubjectPreset" class="wide-select">
-          <el-option v-for="item in subjectOptions" :key="item.value" :label="item.label" :value="item.value" />
-        </el-select>
-        <el-input v-model="newCourseDescription" type="textarea" :rows="2" placeholder="课程说明，可选" />
+        <label class="form-field">
+          <span>课程名称</span>
+          <el-input v-model="newCourseName" placeholder="例如：大学英语、数据结构" />
+        </label>
+        <label class="form-field">
+          <span>学科类型</span>
+          <el-select v-model="newCourseSubjectPreset">
+            <el-option v-for="item in subjectOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </label>
+        <label class="form-field">
+          <span>课程说明</span>
+          <el-input v-model="newCourseDescription" type="textarea" :rows="2" placeholder="选填" />
+        </label>
         <el-button type="primary" @click="addCourse">创建课程</el-button>
         <div class="course-list">
           <button v-for="course in courses" :key="course.courseId" :class="['material-item', { active: course.courseId === selectedCourseId }]" @click="selectCourse(course)">
             <strong>{{ course.name }}</strong>
             <span>{{ course.subjectPreset }} · {{ course.description || '暂无说明' }}</span>
           </button>
+          <div v-if="courses.length === 0" class="empty-note">暂无课程，填写上方信息后创建第一门课程。</div>
         </div>
       </el-card>
 
@@ -1057,11 +1155,12 @@ function messageOf(error: unknown) {
             <small>weight {{ point.weight.toFixed(2) }}</small>
             <p>{{ point.sourceSnippet }}</p>
           </article>
+          <div v-if="knowledgePoints.length === 0" class="empty-note">当前范围暂无知识点，请先选择并解析教材。</div>
         </div>
       </el-card>
     </section>
 
-    <section v-if="canManageContent" id="materials" class="workspace-grid">
+    <section v-if="canManageContent && activeView === 'materials'" id="materials" class="workspace-grid view-section">
       <el-card class="panel" shadow="never">
         <template #header><div class="panel-title"><el-icon><UploadFilled /></el-icon>教材上传与解析</div></template>
         <input ref="fileInput" type="file" class="hidden-input" accept=".pdf,.docx,.txt,.md,.xlsx,.xls" @change="onFileChange" />
@@ -1070,10 +1169,16 @@ function messageOf(error: unknown) {
           <strong>{{ selectedFile?.name || '选择教材文件' }}</strong>
           <span>支持 PDF、DOCX、TXT、Markdown、Excel</span>
         </div>
-        <el-input v-model="title" placeholder="教材标题，可自动使用文件名" />
-        <el-select v-model="subjectPreset" class="wide-select">
-          <el-option v-for="item in subjectOptions" :key="item.value" :label="item.label" :value="item.value" />
-        </el-select>
+        <label class="form-field">
+          <span>教材标题</span>
+          <el-input v-model="title" placeholder="默认使用文件名" />
+        </label>
+        <label class="form-field">
+          <span>学科类型</span>
+          <el-select v-model="subjectPreset">
+            <el-option v-for="item in subjectOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </label>
         <el-button type="primary" :loading="loading" @click="uploadAndParse">上传并解析入库</el-button>
       </el-card>
 
@@ -1084,20 +1189,25 @@ function messageOf(error: unknown) {
             <strong>{{ item.title }}</strong>
             <span>{{ item.subjectPreset }} · {{ item.status }} · {{ item.chunkCount }} chunks</span>
           </button>
+          <div v-if="materials.length === 0" class="empty-note">知识库还是空的，请从左侧上传一份教材。</div>
         </div>
       </el-card>
     </section>
 
-    <section v-if="canManageContent" id="rag" class="workspace-grid">
+    <section v-if="canManageContent && activeView === 'rag'" id="rag" class="workspace-grid view-section">
       <el-card class="panel" shadow="never">
         <template #header><div class="panel-title"><el-icon><Search /></el-icon>向量检索验证</div></template>
-        <el-input v-model="query" type="textarea" :rows="3" placeholder="输入要检索的学习主题，例如：报价邮件、被动语态、二叉树遍历" />
+        <label class="form-field">
+          <span>检索主题</span>
+          <el-input v-model="query" type="textarea" :rows="3" placeholder="例如：报价邮件、被动语态、二叉树遍历" />
+        </label>
         <el-button type="primary" :disabled="!currentMaterial" :loading="loading" @click="runRetrieve">检索教材证据</el-button>
         <div class="hit-list">
           <article v-for="hit in hits" :key="hit.chunk.chunkId" class="hit-card">
             <div class="hit-score">score {{ hit.score.toFixed(3) }}</div>
             <p>{{ hit.chunk.text }}</p>
           </article>
+          <div v-if="hits.length === 0" class="empty-note">输入检索主题并执行检索后，相关教材证据会显示在这里。</div>
         </div>
       </el-card>
 
@@ -1109,18 +1219,25 @@ function messageOf(error: unknown) {
             <p>{{ chunk.text }}</p>
             <el-tag v-for="keyword in chunk.keywords.slice(0, 5)" :key="keyword" size="small">{{ keyword }}</el-tag>
           </article>
+          <div v-if="chunks.length === 0" class="empty-note">选择已解析教材后可查看切片内容与关键词。</div>
         </div>
       </el-card>
     </section>
 
-    <section v-if="canManageContent" id="questions" class="workspace-grid wide">
+    <section v-if="canManageContent && activeView === 'questions'" id="questions" class="workspace-grid wide view-section">
       <el-card class="panel" shadow="never">
         <template #header><div class="panel-title"><el-icon><MagicStick /></el-icon>生成习题</div></template>
-        <el-input v-model="topic" placeholder="出题主题，例如：外贸报价、英语时态、软件测试基础" />
-        <el-checkbox-group v-model="questionTypes">
-          <el-checkbox-button v-for="item in questionTypeOptions" :key="item.value" :label="item.value">{{ item.label }}</el-checkbox-button>
-        </el-checkbox-group>
-        <div class="inline-form">
+        <label class="form-field">
+          <span>出题主题</span>
+          <el-input v-model="topic" placeholder="例如：外贸报价、英语时态、软件测试基础" />
+        </label>
+        <div class="form-field">
+          <span>题型组合</span>
+          <el-checkbox-group v-model="questionTypes">
+            <el-checkbox-button v-for="item in questionTypeOptions" :key="item.value" :label="item.value">{{ item.label }}</el-checkbox-button>
+          </el-checkbox-group>
+        </div>
+        <div class="inline-form question-generate-form">
           <el-select v-model="difficulty"><el-option label="简单" value="EASY" /><el-option label="中等" value="MEDIUM" /><el-option label="困难" value="HARD" /></el-select>
           <el-input-number v-model="count" :min="1" :max="20" />
           <el-button type="primary" :disabled="!currentMaterial" :loading="loading" @click="runGenerate">启动多智能体生成</el-button>
@@ -1164,17 +1281,21 @@ function messageOf(error: unknown) {
             <el-button size="small" type="danger" plain @click="updateStatus(question, false)">退回</el-button>
           </div>
           </article>
+          <div v-if="questions.length === 0" class="empty-note">题库暂无内容，请先选择教材并启动生成任务。</div>
         </el-checkbox-group>
       </el-card>
     </section>
 
-    <section id="learning" class="workspace-grid wide">
+    <section v-if="activeView === 'learning'" id="learning" class="workspace-grid wide view-section">
       <el-card class="panel" shadow="never">
         <template #header><div class="panel-title"><el-icon><DataAnalysis /></el-icon>学习练习闭环</div></template>
-        <el-input v-model="studentId" :disabled="!canEditStudentScope" placeholder="学习者 ID，例如：demo-student" />
+        <label class="form-field">
+          <span>学习者 ID</span>
+          <el-input v-model="studentId" :disabled="!canEditStudentScope" placeholder="例如：demo-student" />
+        </label>
         <div class="inline-form practice-scope-form">
           <el-input-number v-model="practiceCount" :min="1" :max="20" />
-          <el-button type="primary" :disabled="!canCreatePractice" :loading="practiceLoading" @click="createLearningPractice">生成练习任务</el-button>
+          <el-button type="primary" :disabled="!canCreatePractice" :loading="practiceLoading" @click="createLearningPractice">{{ canManageContent ? '生成练习任务' : '开始新练习' }}</el-button>
           <el-button :loading="practiceLoading" @click="loadLearningDashboard">刷新画像</el-button>
         </div>
         <div class="practice-scope">
@@ -1193,6 +1314,7 @@ function messageOf(error: unknown) {
             <strong>{{ set.title }}</strong>
             <span>{{ set.status }} · {{ set.questionIds.length }} 题 · {{ scopeName(set) }}</span>
           </button>
+          <div v-if="practiceSets.length === 0" class="empty-note">当前学习者暂无练习任务。</div>
         </div>
       </el-card>
 
@@ -1231,7 +1353,7 @@ function messageOf(error: unknown) {
       </el-card>
     </section>
 
-    <section class="workspace-grid">
+    <section v-if="activeView === 'progress'" class="workspace-grid view-section">
       <el-card class="panel" shadow="never">
         <template #header><div class="panel-title"><el-icon><Document /></el-icon>错题本</div></template>
         <div v-if="wrongQuestions.length === 0" class="empty-note">当前学习者暂无错题。提交练习后，错误记录会自动归档到这里。</div>
@@ -1261,7 +1383,7 @@ function messageOf(error: unknown) {
       </el-card>
     </section>
 
-    <section v-if="isAdmin" id="users" class="workspace-grid wide">
+    <section v-if="isAdmin && activeView === 'users'" id="users" class="workspace-grid wide view-section">
       <el-card class="panel admin-panel" shadow="never">
         <template #header>
           <div class="panel-title question-toolbar">
@@ -1316,7 +1438,7 @@ function messageOf(error: unknown) {
       </el-card>
     </section>
 
-    <section v-if="canManageContent" id="agents" class="workspace-grid">
+    <section v-if="canManageContent && activeView === 'agents'" id="agents" class="workspace-grid view-section">
       <el-card class="panel" shadow="never">
         <template #header><div class="panel-title"><el-icon><Cpu /></el-icon>多智能体工作流</div></template>
         <div v-for="step in workflow?.steps" :key="step.role" class="workflow-step">
@@ -1324,6 +1446,7 @@ function messageOf(error: unknown) {
           <span>{{ step.goal }}</span>
           <small>{{ step.toolNames.join(' / ') }}</small>
         </div>
+        <div v-if="!workflow?.steps.length" class="empty-note">暂无工作流模板，请检查后端智能体配置。</div>
       </el-card>
 
       <el-card class="panel" shadow="never">
@@ -1332,6 +1455,7 @@ function messageOf(error: unknown) {
           <strong>{{ run.status }}</strong>
           <span>{{ run.finalAnswer }}</span>
         </button>
+        <div v-if="agentRuns.length === 0" class="empty-note">暂无运行记录，生成习题后可查看完整智能体链路。</div>
         <div v-if="currentRun" class="run-detail">
           <h3>当前运行</h3>
           <p>{{ currentRun.finalAnswer }}</p>
@@ -1435,5 +1559,7 @@ function messageOf(error: unknown) {
         <el-button type="primary" @click="saveQuestionEdit">保存</el-button>
       </template>
     </el-dialog>
-  </main>
+      </main>
+    </section>
+  </div>
 </template>

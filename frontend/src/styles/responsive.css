@@ -1,0 +1,391 @@
+@keyframes stage-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes view-enter {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes loading-slide {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(260%);
+  }
+}
+
+@media (max-width: 1180px) {
+  :root {
+    --sidebar-width: 224px;
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-grid,
+  .student-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-lane {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .lane-arrow {
+    display: none;
+  }
+
+  .system-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .system-strip__title {
+    grid-column: 1 / -1;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .system-strip > div:nth-child(2) {
+    border-left: 0;
+  }
+
+  .workspace-grid,
+  .workspace-grid.wide {
+    grid-template-columns: minmax(270px, 0.75fr) minmax(0, 1.25fr);
+  }
+}
+
+@media (max-width: 920px) {
+  .app-sidebar {
+    width: 264px;
+    box-shadow: 18px 0 50px rgba(23, 43, 61, 0.2);
+    transform: translateX(-104%);
+    transition: transform 200ms ease;
+  }
+
+  .app-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay {
+
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    display: block;
+    border: 0;
+    background: rgba(16, 37, 53, 0.42);
+    backdrop-filter: blur(2px);
+  }
+
+  .workspace-shell {
+    margin-left: 0;
+  }
+
+  .app-topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    padding: 12px 18px;
+  }
+
+  .mobile-menu {
+    display: grid;
+  }
+
+  .workspace-grid,
+  .workspace-grid.wide {
+    grid-template-columns: 1fr;
+  }
+
+  .question-panel,
+  .practice-panel,
+  .admin-panel {
+    max-height: none;
+  }
+
+  .login-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .login-story {
+    min-height: 380px;
+  }
+
+  .login-panel {
+    min-height: 560px;
+  }
+}
+
+@media (max-width: 680px) {
+  .login-shell {
+    display: block;
+    padding: 0;
+    background: white;
+  }
+
+  .login-stage {
+    width: 100%;
+    min-height: 100vh;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .login-story {
+    min-height: 220px;
+    padding: 22px 20px 20px;
+  }
+
+  .login-brand .brand-mark {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+
+  .login-story__copy {
+    margin: 28px 0 0;
+  }
+
+  .login-story__copy h1 {
+    margin: 9px 0 8px;
+    font-size: 30px;
+    line-height: 1.23;
+  }
+
+  .login-story__copy p {
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .login-flow,
+  .login-story__foot {
+    display: none;
+  }
+
+  .login-panel {
+    min-height: 0;
+    padding: 28px 20px 34px;
+  }
+
+  .login-panel__head h2 {
+    font-size: 25px;
+  }
+
+  .demo-accounts {
+    margin-top: 20px;
+  }
+
+  .demo-accounts button {
+    min-height: 64px;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .demo-accounts small {
+    display: none;
+  }
+
+  .app-topbar {
+    min-height: 72px;
+    padding: 10px 12px;
+  }
+
+  .page-context > span,
+  .page-context p,
+  .user-menu__copy,
+  .user-menu__caret {
+    display: none;
+  }
+
+  .page-context h1 {
+    overflow: hidden;
+    font-size: 18px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .user-menu {
+    min-width: 40px;
+    width: 40px;
+    height: 40px;
+    grid-template-columns: 1fr;
+    padding: 3px;
+  }
+
+  .user-menu .avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .main-content {
+    padding: 16px 12px 42px;
+  }
+
+  .welcome-band {
+    min-height: 0;
+    align-items: stretch;
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .welcome-band h2 {
+    font-size: 22px;
+  }
+
+  .welcome-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .welcome-actions .el-button {
+    width: 100%;
+    margin: 0;
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .kpi-item {
+    min-height: 122px;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 13px;
+  }
+
+  .kpi-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .kpi-item strong {
+    font-size: 23px;
+  }
+
+  .panel-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .workflow-lane {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workflow-lane button {
+    min-height: 112px;
+  }
+
+  .next-practice {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .next-practice .el-button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .system-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .system-strip__title {
+    grid-column: auto;
+  }
+
+  .system-strip > div,
+  .system-strip > div:nth-child(2) {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .system-strip > div:first-child {
+    border-top: 0;
+  }
+
+  .panel .el-card__header,
+  .panel .el-card__body,
+  .work-panel {
+    padding: 14px;
+  }
+
+  .inline-form,
+  .practice-scope-form,
+  .chapter-create,
+  .admin-toolbar,
+  .admin-user-card,
+  .admin-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .practice-stats,
+  .admin-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .question-toolbar,
+  .toolbar-actions,
+  .card-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .toolbar-actions .el-select,
+  .toolbar-actions .el-button,
+  .card-actions .el-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .topbar-actions > .icon-button {
+    display: none;
+  }
+
+  .welcome-actions,
+  .kpi-grid,
+  .workflow-lane,
+  .practice-stats,
+  .admin-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-item {
+    min-height: 104px;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .demo-accounts {
+    gap: 5px;
+  }
+
+  .review-list > div {
+    grid-template-columns: minmax(80px, 0.8fr) minmax(80px, 1fr) 34px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
