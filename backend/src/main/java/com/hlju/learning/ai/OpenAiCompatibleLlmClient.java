@@ -34,8 +34,13 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
 
     @Override
     public String complete(String systemPrompt, String userPrompt) {
+        return completeWithMetadata(systemPrompt, userPrompt).content();
+    }
+
+    @Override
+    public LlmCompletion completeWithMetadata(String systemPrompt, String userPrompt) {
         if (isBlank(properties.baseUrl()) || isBlank(properties.apiKey())) {
-            return fallback.complete(systemPrompt, userPrompt);
+            return fallback.completeWithMetadata(systemPrompt, userPrompt);
         }
         try {
             Map<String, Object> body = new LinkedHashMap<>();
@@ -59,10 +64,14 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
                     .retrieve()
                     .body(JsonNode.class);
             String content = root == null ? "" : root.path("choices").path(0).path("message").path("content").asText("");
-            return content.isBlank() ? fallback.complete(systemPrompt, userPrompt) : content;
+            if (content.isBlank()) {
+                return fallback.completeWithMetadata(systemPrompt, userPrompt);
+            }
+            JsonNode usage = root.path("usage").path("total_tokens");
+            return new LlmCompletion(content, usage.isIntegralNumber() ? usage.intValue() : null);
         } catch (Exception ex) {
             log.warn("Remote LLM call failed, using mock fallback. reason={}", ex.getMessage());
-            return fallback.complete(systemPrompt, userPrompt);
+            return fallback.completeWithMetadata(systemPrompt, userPrompt);
         }
     }
 

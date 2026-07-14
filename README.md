@@ -2,6 +2,14 @@
 
 基于 RAG 与多智能体协同的通用学习内容生成系统。
 
+## Codex / Harness 开发入口
+
+在 Codex 应用中请直接打开 `D:\BussinessEnglish`。智能体从 `AGENTS.md` 获取仓库地图，人类学习与协作流程见 `docs/HARNESS_GUIDE.md`，统一质量门执行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/verify.ps1
+```
+
 ## 定位
 
 系统不只面向商务英语，也可以用于英语学习、计算机课程、通识课程或自定义教材。当前第一版实现了：

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "agentGuideMaxLines": 120,
+  "defaultLineBudgets": {
+    ".java": 300,
+    ".vue": 400,
+    ".ts": 400,
+    ".css": 500
+  },
+  "fileLineBudgets": {
+    "backend/src/main/java/com/hlju/learning/serviceimpl/QuestionGenerationServiceImpl.java": 400,
+    "frontend/src/App.vue": 1800,
+    "frontend/src/api.ts": 650,
+    "frontend/src/style.css": 2450
+  }
+}

@@ -4,6 +4,14 @@ export type QuestionType = 'SINGLE_CHOICE' | 'TRUE_FALSE' | 'FILL_BLANK' | 'SHOR
 export type QuestionDifficulty = 'EASY' | 'MEDIUM' | 'HARD'
 export type QuestionStatus = 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED'
 export type AgentRunStatus = 'RUNNING' | 'FINISHED' | 'FAILED'
+export type AgentWorkflowMode = 'DIRECT' | 'RAG_ONLY' | 'RAG_MULTI_AGENT'
+export type AgentRole =
+  | 'MATERIAL_UNDERSTANDING'
+  | 'RETRIEVAL_PLANNING'
+  | 'QUESTION_GENERATION'
+  | 'QUALITY_REVIEW'
+  | 'DEDUP_DIFFICULTY'
+  | 'TEACHING_COMPOSER'
 export type PracticeSetStatus = 'ACTIVE' | 'FINISHED'
 
 const TOKEN_KEY = 'smart-learning-agent-token'
@@ -194,10 +202,16 @@ export interface AgentWorkflowTemplate {
 
 export interface AgentStepReport {
   stepId: string
-  role: string
+  role: AgentRole
   goal: string
   summary: string
   status: AgentRunStatus
+  inputJson?: string
+  outputJson?: string
+  startedAt?: string | null
+  finishedAt?: string | null
+  attempt?: number
+  errorSummary?: string | null
 }
 
 export interface AgentToolCall {
@@ -205,6 +219,24 @@ export interface AgentToolCall {
   input: string
   output: string
   success: boolean
+  callId?: string
+  role?: AgentRole
+  startedAt?: string | null
+  finishedAt?: string | null
+  errorSummary?: string | null
+}
+
+export interface AgentRunMetrics {
+  generatedQuestionCount: number
+  groundedQuestionCount: number
+  evidenceHitCount: number
+  reviewPassCount: number
+  reviewRevisionCount: number
+  reviewHumanCount: number
+  reviewRejectCount: number
+  duplicateCount: number
+  durationMs: number
+  tokenUsage: number | null
 }
 
 export interface AgentRunRecord {
@@ -216,6 +248,12 @@ export interface AgentRunRecord {
   toolCalls: AgentToolCall[]
   finalAnswer: string
   createdAt: string
+  workflowMode?: AgentWorkflowMode
+  failedRole?: AgentRole | null
+  errorSummary?: string | null
+  startedAt?: string | null
+  finishedAt?: string | null
+  metrics?: AgentRunMetrics | null
 }
 
 export interface RuntimeStatus {

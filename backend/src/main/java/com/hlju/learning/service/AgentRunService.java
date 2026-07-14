@@ -2,18 +2,20 @@ package com.hlju.learning.service;
 
 import com.hlju.learning.domain.agent.AgentRunRecord;
 import com.hlju.learning.domain.agent.AgentWorkflowTemplate;
-import com.hlju.learning.domain.question.GenerateQuestionRequest;
-import com.hlju.learning.domain.question.QuestionRecord;
-import com.hlju.learning.domain.rag.RetrievalHit;
+import com.hlju.learning.domain.agent.AgentWorkflowData.ExecutionResult;
+import com.hlju.learning.domain.agent.AgentWorkflowData.WorkflowRequest;
+import com.hlju.learning.domain.agent.AgentWorkflowMode;
 
 import java.util.List;
 
 public interface AgentRunService {
     AgentWorkflowTemplate getWorkflowTemplate();
 
-    AgentRunRecord runQuestionWorkflow(String taskId, GenerateQuestionRequest request, List<RetrievalHit> hits, List<QuestionRecord> questions);
+    ExecutionResult runQuestionWorkflow(WorkflowRequest request);
 
     AgentRunRecord getRun(String runId);
 
     List<AgentRunRecord> listRuns();
+
+    List<AgentRunRecord> listRuns(AgentWorkflowMode mode);
 }

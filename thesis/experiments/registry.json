@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "experiments": [
+    {
+      "id": "E01",
+      "title": "教材证据检索质量实验",
+      "status": "planned",
+      "hypothesis": "语义检索能够在前K个结果中召回人工标注的相关教材片段。",
+      "metrics": ["Hit@K", "Recall@K", "MRR", "nDCG@K"],
+      "dataset": "thesis/experiments/datasets/retrieval-eval.jsonl",
+      "rawResultDir": "thesis/experiments/raw-results/E01",
+      "summaryPath": "thesis/experiments/summaries/E01.json"
+    },
+    {
+      "id": "E02",
+      "title": "习题质量评价实验",
+      "status": "planned",
+      "hypothesis": "基于教材证据生成的题目在证据一致性和可审核性上达到预注册标准。",
+      "metrics": ["grounding_rate", "answer_correctness", "answer_uniqueness", "difficulty_match", "format_validity"],
+      "dataset": "thesis/experiments/datasets/question-quality-eval.jsonl",
+      "rawResultDir": "thesis/experiments/raw-results/E02",
+      "summaryPath": "thesis/experiments/summaries/E02.json"
+    },
+    {
+      "id": "E03",
+      "title": "RAG与多智能体审校消融实验",
+      "status": "ready",
+      "hypothesis": "RAG加独立质量审校流程比直接生成和仅RAG生成具有更高审核通过率和证据一致性。",
+      "metrics": ["review_pass_rate", "grounding_rate", "duplicate_rate", "latency_ms", "token_usage"],
+      "dataset": "thesis/experiments/datasets/question-quality-eval.jsonl",
+      "rawResultDir": "thesis/experiments/raw-results/E03",
+      "summaryPath": "thesis/experiments/summaries/E03.json",
+      "modes": ["DIRECT", "RAG_ONLY", "RAG_MULTI_AGENT"],
+      "collectionInterface": "GET /api/agents/runs?workflowMode={mode}",
+      "readinessEvidence": [
+        "backend/src/test/java/com/hlju/learning/serviceimpl/AgentRunServiceImplTest.java",
+        "backend/src/test/java/com/hlju/learning/serviceimpl/QuestionWorkflowIntegrationTest.java",
+        "backend/src/test/java/com/hlju/learning/serviceimpl/agent/QualityReviewAgentTest.java"
+      ],
+      "formalRunNote": "Execution boundary is ready; no formal samples, metrics, or conclusions have been recorded."
+    },
+    {
+      "id": "E04",
+      "title": "系统功能与离线演示验证",
+      "status": "planned",
+      "hypothesis": "memory和mock默认模式能够完成核心业务闭环且不依赖外部付费服务。",
+      "metrics": ["test_pass_rate", "workflow_success_rate", "api_error_rate", "build_time_ms"],
+      "dataset": "thesis/experiments/datasets/system-smoke-cases.jsonl",
+      "rawResultDir": "thesis/experiments/raw-results/E04",
+      "summaryPath": "thesis/experiments/summaries/E04.json"
+    }
+  ]
+}

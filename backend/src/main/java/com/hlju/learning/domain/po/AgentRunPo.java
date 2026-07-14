@@ -10,6 +10,12 @@ public class AgentRunPo {
     private String stepsJson;
     private String toolCallsJson;
     private String finalAnswer;
+    private String workflowMode;
+    private String failedRole;
+    private String errorSummary;
+    private LocalDateTime startedAt;
+    private LocalDateTime finishedAt;
+    private String metricsJson;
     private LocalDateTime createdAt;
 
     public String getRunId() {
@@ -66,6 +72,54 @@ public class AgentRunPo {
 
     public void setFinalAnswer(String finalAnswer) {
         this.finalAnswer = finalAnswer;
+    }
+
+    public String getWorkflowMode() {
+        return workflowMode;
+    }
+
+    public void setWorkflowMode(String workflowMode) {
+        this.workflowMode = workflowMode;
+    }
+
+    public String getFailedRole() {
+        return failedRole;
+    }
+
+    public void setFailedRole(String failedRole) {
+        this.failedRole = failedRole;
+    }
+
+    public String getErrorSummary() {
+        return errorSummary;
+    }
+
+    public void setErrorSummary(String errorSummary) {
+        this.errorSummary = errorSummary;
+    }
+
+    public LocalDateTime getStartedAt() {
+        return startedAt;
+    }
+
+    public void setStartedAt(LocalDateTime startedAt) {
+        this.startedAt = startedAt;
+    }
+
+    public LocalDateTime getFinishedAt() {
+        return finishedAt;
+    }
+
+    public void setFinishedAt(LocalDateTime finishedAt) {
+        this.finishedAt = finishedAt;
+    }
+
+    public String getMetricsJson() {
+        return metricsJson;
+    }
+
+    public void setMetricsJson(String metricsJson) {
+        this.metricsJson = metricsJson;
     }
 
     public LocalDateTime getCreatedAt() {

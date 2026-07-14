@@ -1,0 +1,15 @@
+schema_version: 1
+college: "计算机与大数据学院（网络安全学院）"
+major: "软件工程"
+class_name: "软件1班"
+student_name: "张艺政"
+student_id: "20230456"
+supervisor: "金虎"
+title_zh: "基于RAG与多智能体协同的外贸英语智能习题生成系统设计与实现"
+title_en: "Design and Implementation of a Business English Intelligent Exercise Generation System Based on RAG and Multi-Agent Collaboration"
+proposal_date: ""
+project_start_date: ""
+project_end_date: ""
+proposal_source: "毕业设计_开题报告.md"
+design_source: "毕业设计_系统设计方案.md"
+retain_multi_agent_claim: true

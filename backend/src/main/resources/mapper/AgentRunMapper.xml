@@ -9,19 +9,34 @@
         <result property="stepsJson" column="steps_json"/>
         <result property="toolCallsJson" column="tool_calls_json"/>
         <result property="finalAnswer" column="final_answer"/>
+        <result property="workflowMode" column="workflow_mode"/>
+        <result property="failedRole" column="failed_role"/>
+        <result property="errorSummary" column="error_summary"/>
+        <result property="startedAt" column="started_at"/>
+        <result property="finishedAt" column="finished_at"/>
+        <result property="metricsJson" column="metrics_json"/>
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
     <insert id="upsertAgentRun">
-        INSERT INTO agent_run (run_id, task_id, objective, status, steps_json, tool_calls_json, final_answer, created_at)
-        VALUES (#{po.runId}, #{po.taskId}, #{po.objective}, #{po.status}, #{po.stepsJson}, #{po.toolCallsJson}, #{po.finalAnswer}, #{po.createdAt})
+        INSERT INTO agent_run (run_id, task_id, objective, status, steps_json, tool_calls_json, final_answer,
+                               workflow_mode, failed_role, error_summary, started_at, finished_at, metrics_json, created_at)
+        VALUES (#{po.runId}, #{po.taskId}, #{po.objective}, #{po.status}, #{po.stepsJson}, #{po.toolCallsJson},
+                #{po.finalAnswer}, #{po.workflowMode}, #{po.failedRole}, #{po.errorSummary}, #{po.startedAt},
+                #{po.finishedAt}, #{po.metricsJson}, #{po.createdAt})
         ON DUPLICATE KEY UPDATE
           task_id = VALUES(task_id),
           objective = VALUES(objective),
           status = VALUES(status),
           steps_json = VALUES(steps_json),
           tool_calls_json = VALUES(tool_calls_json),
-          final_answer = VALUES(final_answer)
+          final_answer = VALUES(final_answer),
+          workflow_mode = VALUES(workflow_mode),
+          failed_role = VALUES(failed_role),
+          error_summary = VALUES(error_summary),
+          started_at = VALUES(started_at),
+          finished_at = VALUES(finished_at),
+          metrics_json = VALUES(metrics_json)
     </insert>
 
     <select id="findAgentRun" resultMap="AgentRunMap">

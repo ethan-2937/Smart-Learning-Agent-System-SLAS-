@@ -1,0 +1,266 @@
+.agents-workspace {
+  grid-template-columns: minmax(330px, 0.78fr) minmax(0, 1.22fr);
+}
+
+.agent-panel-title {
+  justify-content: space-between;
+}
+
+.agent-panel-title > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-panel-title > small {
+  color: var(--muted);
+  font-family: "Aptos", "HarmonyOS Sans SC", sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.agent-blueprint__intro {
+  margin-bottom: 14px;
+  padding: 15px;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+}
+
+.agent-blueprint__intro strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.agent-blueprint__intro p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+.agent-role-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-role-list li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 11px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.agent-role-list li:last-child {
+  border-bottom: 0;
+}
+
+.agent-role-index {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #aac4bc;
+  color: var(--brand);
+  font-family: Georgia, serif;
+  font-size: 12px;
+}
+
+.agent-role-list strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.agent-role-list p {
+  margin: 4px 0 6px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.agent-role-list small {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  color: var(--accent-strong);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.agent-role-list small .el-icon {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.agent-run-list {
+  display: grid;
+  max-height: 310px;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.agent-run-list .run-item {
+  padding: 14px;
+}
+
+.run-item__head {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+
+.run-item__head small {
+  color: var(--accent-strong);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.agent-run-list .run-item > time {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted-2);
+  font-size: 9px;
+}
+
+.run-detail {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.run-detail__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.run-detail__header h3 {
+  margin: 5px 0 0;
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.run-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  margin: 14px 0;
+}
+
+.run-facts div {
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+}
+
+.run-facts small,
+.run-facts strong {
+  display: block;
+}
+
+.run-facts small {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.run-facts strong {
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.run-error {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0;
+  padding: 12px;
+  border-left: 3px solid var(--coral);
+  background: var(--coral-soft);
+}
+
+.run-error strong {
+  color: var(--coral);
+  font-size: 11px;
+}
+
+.run-error span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.run-step-list {
+  display: grid;
+}
+
+.run-step {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.run-step__marker {
+  width: 10px;
+  height: 10px;
+  margin-top: 4px;
+  border: 2px solid var(--brand);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px var(--brand-soft);
+}
+
+.run-step.is-failed .run-step__marker {
+  border-color: var(--coral);
+  box-shadow: 0 0 0 4px var(--coral-soft);
+}
+
+.run-step__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.run-step__head strong {
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.run-step p {
+  margin: 5px 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.run-step small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted-2);
+  font-size: 9px;
+}
+
+@media (max-width: 1180px) {
+  .agents-workspace {
+    grid-template-columns: minmax(300px, 0.8fr) minmax(0, 1.2fr);
+  }
+}
+
+@media (max-width: 920px) {
+  .agents-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .run-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

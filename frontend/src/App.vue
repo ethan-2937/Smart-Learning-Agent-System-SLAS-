@@ -2,27 +2,17 @@
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
-  Collection,
-  Connection,
-  Cpu,
   DataAnalysis,
   Document,
-  Files,
-  HomeFilled,
-  Lock,
   MagicStick,
-  Menu,
-  Notebook,
-  Reading,
-  Refresh,
   Search,
-  SwitchButton,
-  TrendCharts,
   UploadFilled,
-  User,
 } from '@element-plus/icons-vue'
 import DashboardOverview from './features/dashboard/DashboardOverview.vue'
 import LoginView from './features/auth/LoginView.vue'
+import AgentRunsView from './features/agents/AgentRunsView.vue'
+import WorkspaceShell from './features/shell/WorkspaceShell.vue'
+import type { WorkspaceView } from './features/shell/workspace'
 import type {
   AgentRunRecord,
   AgentWorkflowTemplate,
@@ -93,8 +83,6 @@ import {
   updateQuestion,
   uploadMaterial,
 } from './api'
-
-type WorkspaceView = 'dashboard' | 'courses' | 'materials' | 'rag' | 'questions' | 'learning' | 'progress' | 'users' | 'agents'
 
 const courses = ref<CourseRecord[]>([])
 const chapters = ref<CourseChapterRecord[]>([])
@@ -193,6 +181,12 @@ const questionTypeOptions = [
   { label: '写作', value: 'WRITING' },
 ] as const
 
+const roleDisplay: Record<string, { name: string; description: string }> = {
+  ADMIN: { name: '系统管理员', description: '管理账号、角色与系统级配置，同时具备教师内容权限。' },
+  TEACHER: { name: '教师', description: '维护课程、教材与题库，审核 AI 候选题并布置练习。' },
+  STUDENT: { name: '学生', description: '完成练习、查看批改反馈，并跟踪错题与知识掌握度。' },
+}
+
 const indexedCount = computed(() => materials.value.filter((item) => item.status === 'INDEXED').length)
 const pendingCount = computed(() => questions.value.filter((item) => item.status === 'PENDING_REVIEW').length)
 const approvedCount = computed(() => questions.value.filter((item) => item.status === 'APPROVED').length)
@@ -232,27 +226,6 @@ const canManageContent = computed(() => isAdmin.value || isTeacher.value)
 const canEditStudentScope = computed(() => canManageContent.value)
 const canCreatePractice = computed(() => canManageContent.value ? approvedCount.value > 0 : true)
 const activeAdminCount = computed(() => adminUsers.value.filter((item) => item.status === 1).length)
-const viewMeta = computed(() => {
-  const views: Record<WorkspaceView, { title: string; description: string }> = {
-    dashboard: {
-      title: canManageContent.value ? '教学工作概览' : '我的学习概览',
-      description: canManageContent.value ? '从教材入库到练习反馈，掌握当前教学内容的处理进度。' : '查看练习进度、答题表现和需要优先复习的知识点。',
-    },
-    courses: { title: '课程与知识点', description: '维护课程章节结构，并检查教材自动提取的知识点。' },
-    materials: { title: '教材知识库', description: '上传教材并完成解析、切片和向量索引。' },
-    rag: { title: '检索验证', description: '验证问题能否召回可靠的教材片段，为生成习题提供证据。' },
-    questions: { title: '智能题库', description: '配置多智能体生成任务，审核、编辑并导出习题。' },
-    learning: {
-      title: canManageContent.value ? '练习任务' : '我的练习',
-      description: canManageContent.value ? '按学习者和内容范围组卷，并查看自动批改结果。' : '完成分配给你的练习，并根据即时反馈订正答案。',
-    },
-    progress: { title: '学习画像', description: '结合错题与知识掌握度，定位下一步复习重点。' },
-    users: { title: '账号与权限', description: '维护系统账号、角色和启用状态。' },
-    agents: { title: '智能体运行', description: '查看多智能体分工、执行步骤和最近运行结果。' },
-  }
-  return views[activeView.value]
-})
-
 onMounted(async () => {
   await initAuth()
 })
@@ -487,7 +460,11 @@ async function submitChangePassword() {
 }
 
 function roleName(roleCode: string) {
-  return adminRoles.value.find((item) => item.roleCode === roleCode)?.roleName || roleCode
+  return roleDisplay[roleCode]?.name || adminRoles.value.find((item) => item.roleCode === roleCode)?.roleName || roleCode
+}
+
+function roleDescription(roleCode: string, fallback: string) {
+  return roleDisplay[roleCode]?.description || fallback
 }
 
 function roleTagType(roleCode: string) {
@@ -975,110 +952,24 @@ function messageOf(error: unknown) {
 
   <LoginView v-else-if="!currentUser" :busy="loginBusy" :error="loginError" :logo-url="logoUrl" @submit="login" />
 
-  <div v-else class="app-layout">
-    <button v-if="sidebarOpen" class="sidebar-overlay" type="button" aria-label="关闭导航" @click="sidebarOpen = false"></button>
-
-    <aside :class="['app-sidebar', { open: sidebarOpen }]">
-      <button class="sidebar-brand" type="button" @click="setActiveView('dashboard')">
-        <span class="brand-mark"><img :src="logoUrl" alt="SLAS 标志" /></span>
-        <span>
-          <strong>SLAS 智学系统</strong>
-          <small>Smart Learning Agent</small>
-        </span>
-      </button>
-
-      <nav class="sidebar-nav" aria-label="主导航">
-        <div class="nav-group">
-          <span class="nav-group__label">工作台</span>
-          <button :class="{ active: activeView === 'dashboard' }" type="button" @click="setActiveView('dashboard')">
-            <el-icon><HomeFilled /></el-icon><span>概览</span>
-          </button>
-          <button :class="{ active: activeView === 'learning' }" type="button" @click="setActiveView('learning')">
-            <el-icon><Reading /></el-icon><span>{{ canManageContent ? '练习任务' : '我的练习' }}</span>
-          </button>
-          <button :class="{ active: activeView === 'progress' }" type="button" @click="setActiveView('progress')">
-            <el-icon><TrendCharts /></el-icon><span>学习画像</span>
-            <em v-if="wrongCount > 0">{{ wrongCount }}</em>
-          </button>
-        </div>
-
-        <div v-if="canManageContent" class="nav-group">
-          <span class="nav-group__label">内容与题库</span>
-          <button :class="{ active: activeView === 'courses' }" type="button" @click="setActiveView('courses')">
-            <el-icon><Collection /></el-icon><span>课程与知识点</span>
-          </button>
-          <button :class="{ active: activeView === 'materials' }" type="button" @click="setActiveView('materials')">
-            <el-icon><Files /></el-icon><span>教材知识库</span>
-          </button>
-          <button :class="{ active: activeView === 'rag' }" type="button" @click="setActiveView('rag')">
-            <el-icon><Search /></el-icon><span>检索验证</span>
-          </button>
-          <button :class="{ active: activeView === 'questions' }" type="button" @click="setActiveView('questions')">
-            <el-icon><Notebook /></el-icon><span>智能题库</span>
-            <em v-if="pendingCount > 0">{{ pendingCount }}</em>
-          </button>
-          <button :class="{ active: activeView === 'agents' }" type="button" @click="setActiveView('agents')">
-            <el-icon><Connection /></el-icon><span>智能体运行</span>
-          </button>
-        </div>
-
-        <div v-if="isAdmin" class="nav-group">
-          <span class="nav-group__label">系统管理</span>
-          <button :class="{ active: activeView === 'users' }" type="button" @click="setActiveView('users')">
-            <el-icon><User /></el-icon><span>账号与权限</span>
-          </button>
-        </div>
-      </nav>
-
-      <div class="sidebar-status">
-        <span :class="['status-dot', { ready: runtimeStatus }]" aria-hidden="true"></span>
-        <div>
-          <strong>{{ runtimeStatus ? '系统服务正常' : '正在检查服务' }}</strong>
-          <small>{{ runtimeStatus?.aiProvider || 'AI' }} · {{ runtimeStatus?.vectorProvider || 'Vector DB' }}</small>
-        </div>
-      </div>
-    </aside>
-
-    <section class="workspace-shell">
-      <header class="app-topbar">
-        <el-tooltip content="打开导航" placement="bottom">
-          <button class="icon-button mobile-menu" type="button" aria-label="打开导航" @click="sidebarOpen = true">
-            <el-icon><Menu /></el-icon>
-          </button>
-        </el-tooltip>
-
-        <div class="page-context">
-          <span>学习工作台 / {{ viewMeta.title }}</span>
-          <h1>{{ viewMeta.title }}</h1>
-          <p>{{ viewMeta.description }}</p>
-        </div>
-
-        <div class="topbar-actions">
-          <el-tooltip content="刷新当前数据" placement="bottom">
-            <button class="icon-button" type="button" aria-label="刷新当前数据" @click="refreshAll">
-              <el-icon><Refresh /></el-icon>
-            </button>
-          </el-tooltip>
-          <el-dropdown trigger="click" placement="bottom-end" @command="handleAccountCommand">
-            <button class="user-menu" type="button">
-              <span class="avatar">{{ userInitial }}</span>
-              <span class="user-menu__copy">
-                <strong>{{ currentUser.realName || currentUser.username }}</strong>
-                <small>{{ roleLabel }}</small>
-              </span>
-              <span class="user-menu__caret">⌄</span>
-            </button>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="password"><el-icon><Lock /></el-icon>修改密码</el-dropdown-item>
-                <el-dropdown-item command="logout" divided><el-icon><SwitchButton /></el-icon>退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
-      </header>
-
-      <main class="main-content">
+  <WorkspaceShell
+    v-else
+    v-model:sidebar-open="sidebarOpen"
+    :active-view="activeView"
+    :can-manage-content="canManageContent"
+    :is-admin="isAdmin"
+    :wrong-count="wrongCount"
+    :pending-count="pendingCount"
+    :runtime-status="runtimeStatus"
+    :current-user="currentUser"
+    :logo-url="logoUrl"
+    :user-initial="userInitial"
+    :role-label="roleLabel"
+    :current-material-title="currentMaterial?.title"
+    @navigate="setActiveView"
+    @refresh="refreshAll"
+    @account-command="handleAccountCommand"
+  >
 
         <DashboardOverview
           v-if="activeView === 'dashboard'"
@@ -1179,7 +1070,7 @@ function messageOf(error: unknown) {
             <el-option v-for="item in subjectOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </label>
-        <el-button type="primary" :loading="loading" @click="uploadAndParse">上传并解析入库</el-button>
+        <el-button type="primary" :disabled="!selectedFile" :loading="loading" @click="uploadAndParse">上传并解析入库</el-button>
       </el-card>
 
       <el-card class="panel" shadow="never">
@@ -1201,6 +1092,13 @@ function messageOf(error: unknown) {
           <span>检索主题</span>
           <el-input v-model="query" type="textarea" :rows="3" placeholder="例如：报价邮件、被动语态、二叉树遍历" />
         </label>
+        <div :class="['task-prerequisite', { ready: currentMaterial }]">
+          <div>
+            <small>当前检索范围</small>
+            <strong>{{ currentMaterial?.title || '请先选择一份已解析教材' }}</strong>
+          </div>
+          <button type="button" @click="setActiveView('materials')">{{ currentMaterial ? '更换教材' : '选择教材' }}</button>
+        </div>
         <el-button type="primary" :disabled="!currentMaterial" :loading="loading" @click="runRetrieve">检索教材证据</el-button>
         <div class="hit-list">
           <article v-for="hit in hits" :key="hit.chunk.chunkId" class="hit-card">
@@ -1227,6 +1125,13 @@ function messageOf(error: unknown) {
     <section v-if="canManageContent && activeView === 'questions'" id="questions" class="workspace-grid wide view-section">
       <el-card class="panel" shadow="never">
         <template #header><div class="panel-title"><el-icon><MagicStick /></el-icon>生成习题</div></template>
+        <div :class="['task-prerequisite', { ready: currentMaterial }]">
+          <div>
+            <small>题目来源</small>
+            <strong>{{ currentMaterial?.title || '尚未选择教材，暂时不能生成' }}</strong>
+          </div>
+          <button type="button" @click="setActiveView('materials')">{{ currentMaterial ? '更换来源' : '选择教材' }}</button>
+        </div>
         <label class="form-field">
           <span>出题主题</span>
           <el-input v-model="topic" placeholder="例如：外贸报价、英语时态、软件测试基础" />
@@ -1297,6 +1202,10 @@ function messageOf(error: unknown) {
           <el-input-number v-model="practiceCount" :min="1" :max="20" />
           <el-button type="primary" :disabled="!canCreatePractice" :loading="practiceLoading" @click="createLearningPractice">{{ canManageContent ? '生成练习任务' : '开始新练习' }}</el-button>
           <el-button :loading="practiceLoading" @click="loadLearningDashboard">刷新画像</el-button>
+        </div>
+        <div v-if="canManageContent && approvedCount === 0" class="task-prerequisite">
+          <div><small>组卷前置条件</small><strong>题库中还没有审核通过的题目</strong></div>
+          <button type="button" @click="setActiveView('questions')">前往审核</button>
         </div>
         <div class="practice-scope">
           <strong>当前范围</strong>
@@ -1427,8 +1336,8 @@ function messageOf(error: unknown) {
           <article v-for="role in adminRoles" :key="role.roleCode" class="role-explain-card">
             <el-tag :type="roleTagType(role.roleCode)" effect="light">{{ role.roleCode }}</el-tag>
             <div>
-              <strong>{{ role.roleName }}</strong>
-              <p>{{ role.description }}</p>
+              <strong>{{ roleName(role.roleCode) }}</strong>
+              <p>{{ roleDescription(role.roleCode, role.description) }}</p>
             </div>
           </article>
         </div>
@@ -1438,34 +1347,13 @@ function messageOf(error: unknown) {
       </el-card>
     </section>
 
-    <section v-if="canManageContent && activeView === 'agents'" id="agents" class="workspace-grid view-section">
-      <el-card class="panel" shadow="never">
-        <template #header><div class="panel-title"><el-icon><Cpu /></el-icon>多智能体工作流</div></template>
-        <div v-for="step in workflow?.steps" :key="step.role" class="workflow-step">
-          <strong>{{ step.role }}</strong>
-          <span>{{ step.goal }}</span>
-          <small>{{ step.toolNames.join(' / ') }}</small>
-        </div>
-        <div v-if="!workflow?.steps.length" class="empty-note">暂无工作流模板，请检查后端智能体配置。</div>
-      </el-card>
-
-      <el-card class="panel" shadow="never">
-        <template #header><div class="panel-title">运行记录</div></template>
-        <button v-for="run in agentRuns" :key="run.runId" class="run-item" @click="openRun(run)">
-          <strong>{{ run.status }}</strong>
-          <span>{{ run.finalAnswer }}</span>
-        </button>
-        <div v-if="agentRuns.length === 0" class="empty-note">暂无运行记录，生成习题后可查看完整智能体链路。</div>
-        <div v-if="currentRun" class="run-detail">
-          <h3>当前运行</h3>
-          <p>{{ currentRun.finalAnswer }}</p>
-          <div v-for="step in currentRun.steps" :key="step.stepId" class="workflow-step done">
-            <strong>{{ step.role }}</strong>
-            <span>{{ step.summary }}</span>
-          </div>
-        </div>
-      </el-card>
-    </section>
+    <AgentRunsView
+      v-if="canManageContent && activeView === 'agents'"
+      :workflow="workflow"
+      :runs="agentRuns"
+      :current-run="currentRun"
+      @select-run="openRun"
+    />
 
 
     <el-dialog v-model="userDialogVisible" :title="userDialogMode === 'create' ? '新建账号' : '编辑账号'" width="720px" class="account-dialog">
@@ -1488,7 +1376,7 @@ function messageOf(error: unknown) {
           </el-form-item>
           <el-form-item class="admin-form-full" label="角色">
             <el-checkbox-group v-model="userForm.roles">
-              <el-checkbox-button v-for="role in adminRoles" :key="role.roleCode" :label="role.roleCode">{{ role.roleName }}</el-checkbox-button>
+              <el-checkbox-button v-for="role in adminRoles" :key="role.roleCode" :label="role.roleCode">{{ roleName(role.roleCode) }}</el-checkbox-button>
             </el-checkbox-group>
           </el-form-item>
         </div>
@@ -1559,7 +1447,5 @@ function messageOf(error: unknown) {
         <el-button type="primary" @click="saveQuestionEdit">保存</el-button>
       </template>
     </el-dialog>
-      </main>
-    </section>
-  </div>
+  </WorkspaceShell>
 </template>

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "templates": [
+    {
+      "id": "hlju-thesis-engineering",
+      "role": "Official engineering thesis template",
+      "repositoryPath": "thesis/templates/hlju-thesis-engineering-template.docx",
+      "sourcePath": "D:/doc-diff-agent/附件1-2：黑龙江大学本科毕业论文（设计）模板（理工）.docx",
+      "sha256": "ab944187940200c043bf9f8118939f2bd1f6d1d7c05eac9b2994ae683efa6d25",
+      "bytes": 155466,
+      "contentPolicy": "Authoritative layout and style source. Never edit in place."
+    },
+    {
+      "id": "hlju-opening-report-layout-reference",
+      "role": "Opening report layout reference",
+      "repositoryPath": "thesis/templates/hlju-opening-report-layout-reference.docx",
+      "sourcePath": "D:/doc-diff-agent/黑龙江大学开题报告_多智能体文档差异测评系统_填写版.docx",
+      "sha256": "690b011920f9c3319dcfad500262f995f30cf7d91769528c4c4cd4c032f2eae8",
+      "bytes": 50827,
+      "contentPolicy": "Layout only. The retained file contains another project's prose; replace all body content in generated copies."
+    }
+  ]
+}

@@ -68,6 +68,10 @@
   .workspace-grid.wide {
     grid-template-columns: minmax(270px, 0.75fr) minmax(0, 1.25fr);
   }
+
+  .scope-switch {
+    display: none;
+  }
 }
 
 @media (max-width: 920px) {
@@ -331,6 +335,10 @@
   .admin-user-card,
   .admin-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .task-prerequisite {
+    align-items: flex-start;
   }
 
   .practice-stats,

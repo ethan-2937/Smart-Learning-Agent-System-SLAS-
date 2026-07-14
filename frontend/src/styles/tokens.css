@@ -1,27 +1,36 @@
 :root {
-  --blue: #2368d9;
-  --blue-strong: #174fae;
-  --blue-soft: #eaf2ff;
-  --teal: #0f8f7b;
-  --teal-soft: #e8f7f3;
-  --yellow: #d99a21;
-  --yellow-soft: #fff6df;
-  --red: #d84f55;
-  --red-soft: #fff0f1;
-  --ink: #172b3d;
-  --ink-2: #31465a;
-  --muted: #6a7b8c;
-  --muted-2: #94a1ae;
-  --line: #dce5ed;
-  --line-strong: #cbd8e3;
-  --surface: #ffffff;
-  --surface-soft: #f7f9fc;
-  --page: #f1f5f9;
-  --sidebar-width: 252px;
-  --shadow-sm: 0 4px 14px rgba(34, 61, 82, 0.06);
-  --shadow-md: 0 16px 42px rgba(34, 61, 82, 0.11);
+  --brand: #176461;
+  --brand-strong: #103f40;
+  --brand-deep: #0d3133;
+  --brand-soft: #e6f0ec;
+  --accent: #d9953f;
+  --accent-strong: #b77224;
+  --accent-soft: #fbf0dc;
+  --coral: #c86650;
+  --coral-soft: #f9e9e3;
+  --blue: var(--brand);
+  --blue-strong: var(--brand-strong);
+  --blue-soft: var(--brand-soft);
+  --teal: #318577;
+  --teal-soft: #e4f2ed;
+  --yellow: var(--accent);
+  --yellow-soft: var(--accent-soft);
+  --red: var(--coral);
+  --red-soft: var(--coral-soft);
+  --ink: #173234;
+  --ink-2: #345052;
+  --muted: #6f7e79;
+  --muted-2: #99a39d;
+  --line: #dedfd8;
+  --line-strong: #c9cdc4;
+  --surface: #fffefa;
+  --surface-soft: #f7f4ed;
+  --page: #f0ede5;
+  --sidebar-width: 272px;
+  --shadow-sm: 0 6px 22px rgba(25, 58, 57, 0.07);
+  --shadow-md: 0 22px 64px rgba(24, 53, 52, 0.14);
   color: var(--ink);
-  font-family: "HarmonyOS Sans SC", "MiSans", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
+  font-family: "Aptos", "HarmonyOS Sans SC", "MiSans", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
   font-synthesis: none;
   background: var(--page);
 }
@@ -42,10 +51,12 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    linear-gradient(rgba(38, 93, 134, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(38, 93, 134, 0.025) 1px, transparent 1px),
+    radial-gradient(circle at 84% 8%, rgba(217, 149, 63, 0.09), transparent 22rem),
+    radial-gradient(circle at 15% 72%, rgba(23, 100, 97, 0.07), transparent 28rem),
+    linear-gradient(rgba(37, 74, 70, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 74, 70, 0.025) 1px, transparent 1px),
     var(--page);
-  background-size: 32px 32px;
+  background-size: auto, auto, 40px 40px, 40px 40px, auto;
 }
 
 button,
@@ -61,6 +72,6 @@ button {
 
 button:focus-visible,
 [role="button"]:focus-visible {
-  outline: 3px solid rgba(35, 104, 217, 0.24);
+  outline: 3px solid rgba(217, 149, 63, 0.34);
   outline-offset: 2px;
 }

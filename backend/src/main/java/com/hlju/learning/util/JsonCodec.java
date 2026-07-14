@@ -32,4 +32,15 @@ public class JsonCodec {
             throw new IllegalArgumentException("JSON parsing failed: " + ex.getMessage(), ex);
         }
     }
+
+    public <T> T read(String json, Class<T> type) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(json, type);
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("JSON parsing failed: " + ex.getMessage(), ex);
+        }
+    }
 }

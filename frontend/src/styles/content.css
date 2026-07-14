@@ -68,6 +68,56 @@
   flex-wrap: wrap;
 }
 
+.task-prerequisite {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 11px 12px;
+  border: 1px solid #e2c7a3;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+}
+
+.task-prerequisite.ready {
+  border-color: #b9d2ca;
+  border-left-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.task-prerequisite small,
+.task-prerequisite strong {
+  display: block;
+}
+
+.task-prerequisite small {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.task-prerequisite strong {
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-prerequisite button {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  color: var(--brand);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 900;
+}
+
 .hidden-input {
   display: none;
 }

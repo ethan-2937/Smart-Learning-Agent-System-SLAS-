@@ -32,3 +32,7 @@ _video_keyframes/
 
 # Maven wrapper/cache leftovers
 .mvn/wrapper/maven-wrapper.jar
+
+# Reproducible thesis build intermediates
+thesis/builds/*
+!thesis/builds/README.md

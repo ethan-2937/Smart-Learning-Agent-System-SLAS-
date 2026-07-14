@@ -20,7 +20,12 @@ public record GenerationTaskRecord(
         Instant updatedAt
 ) {
     public GenerationTaskRecord withResult(GenerationTaskStatus nextStatus, String nextAgentRunId, List<QuestionRecord> nextQuestions) {
+        return withResult(nextStatus, nextAgentRunId, nextQuestions, Instant.now());
+    }
+
+    public GenerationTaskRecord withResult(GenerationTaskStatus nextStatus, String nextAgentRunId,
+                                           List<QuestionRecord> nextQuestions, Instant nextUpdatedAt) {
         return new GenerationTaskRecord(taskId, materialId, subjectPreset, topic, questionTypes, difficulty,
-                requestedCount, nextStatus, nextAgentRunId, nextQuestions, createdAt, Instant.now());
+                requestedCount, nextStatus, nextAgentRunId, nextQuestions, createdAt, nextUpdatedAt);
     }
 }

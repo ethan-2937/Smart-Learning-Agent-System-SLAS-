@@ -1,10 +1,12 @@
 package com.hlju.learning.controller;
 
 import com.hlju.learning.domain.agent.AgentRunRecord;
+import com.hlju.learning.domain.agent.AgentWorkflowMode;
 import com.hlju.learning.domain.agent.AgentWorkflowTemplate;
 import com.hlju.learning.service.AgentRunService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -23,8 +25,8 @@ public class AgentController {
     }
 
     @GetMapping("/api/agents/runs")
-    public List<AgentRunRecord> listRuns() {
-        return agentRunService.listRuns();
+    public List<AgentRunRecord> listRuns(@RequestParam(value = "workflowMode", required = false) AgentWorkflowMode mode) {
+        return mode == null ? agentRunService.listRuns() : agentRunService.listRuns(mode);
     }
 
     @GetMapping("/api/agents/runs/{runId}")

@@ -27,13 +27,14 @@ public class MemoryQuestionRepository implements QuestionRepository {
     public Optional<GenerationTaskRecord> findTask(String taskId) {
         GenerationTaskRecord task = tasks.get(taskId);
         if (task == null) return Optional.empty();
-        return Optional.of(task.withResult(task.status(), task.agentRunId(), findQuestionsByTaskId(taskId)));
+        return Optional.of(task.withResult(task.status(), task.agentRunId(), findQuestionsByTaskId(taskId), task.updatedAt()));
     }
 
     @Override
     public List<GenerationTaskRecord> findAllTasks() {
         return tasks.values().stream()
-                .map(task -> task.withResult(task.status(), task.agentRunId(), findQuestionsByTaskId(task.taskId())))
+                .map(task -> task.withResult(task.status(), task.agentRunId(),
+                        findQuestionsByTaskId(task.taskId()), task.updatedAt()))
                 .sorted(Comparator.comparing(GenerationTaskRecord::createdAt).reversed())
                 .toList();
     }

@@ -87,6 +87,12 @@ CREATE TABLE IF NOT EXISTS agent_run (
   steps_json LONGTEXT,
   tool_calls_json LONGTEXT,
   final_answer TEXT,
+  workflow_mode VARCHAR(32) NOT NULL DEFAULT 'RAG_MULTI_AGENT',
+  failed_role VARCHAR(64),
+  error_summary VARCHAR(500),
+  started_at DATETIME NOT NULL,
+  finished_at DATETIME,
+  metrics_json TEXT,
   created_at DATETIME NOT NULL,
   INDEX idx_agent_run_task (task_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

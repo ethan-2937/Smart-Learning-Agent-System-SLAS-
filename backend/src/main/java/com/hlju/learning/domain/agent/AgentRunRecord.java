@@ -11,6 +11,12 @@ public record AgentRunRecord(
         List<AgentStepReport> steps,
         List<AgentToolCall> toolCalls,
         String finalAnswer,
-        Instant createdAt
+        Instant createdAt,
+        AgentWorkflowMode workflowMode,
+        AgentRole failedRole,
+        String errorSummary,
+        Instant startedAt,
+        Instant finishedAt,
+        AgentRunMetrics metrics
 ) {
 }
